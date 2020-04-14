@@ -63,6 +63,9 @@ _panic(const char *file, int line, const char *fmt,...)
 	cprintf("\n");
 	va_end(ap);
 
+	cprintf("\n\n");
+	mon_backtrace(0,0,0);
+
 dead:
 	/* break into the kernel monitor */
 	while (1)
