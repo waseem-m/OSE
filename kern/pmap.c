@@ -115,6 +115,7 @@ boot_alloc(uint32_t n)
 	//
 	// LAB 2: Your code here.
 
+	// todo: If we're out of memory, boot_alloc should panic.
 	result = nextfree;
 	nextfree += ROUNDUP(n, PGSIZE);
 	return result;
@@ -163,6 +164,7 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 
+	// todo: Use memset to initialize all fields of each struct PageInfo to 0.
 	pages = boot_alloc(npages * sizeof(struct PageInfo));
 
 	//////////////////////////////////////////////////////////////////////
@@ -255,6 +257,7 @@ mem_init(void)
 void
 page_init(void)
 {
+	// todo: what??
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
 	//  1) Mark physical page 0 as in use.
