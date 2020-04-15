@@ -57,7 +57,7 @@ i386_detect_memory(void)
     char* Extended = IOSpace + EXTPHYSMEM;
 
     cprintf("\n\n");
-    cprintf("npages: %p\n", npages);
+    cprintf("npages: %d\n", npages);
     cprintf("Base: %p\n", base);
     cprintf("IOSpace: %p\n", IOSpace);
     cprintf("Extended: %p\n", Extended);
@@ -116,8 +116,16 @@ boot_alloc(uint32_t n)
 	// LAB 2: Your code here.
 
 	// todo: If we're out of memory, boot_alloc should panic.
+
+
 	result = nextfree;
-	nextfree += ROUNDUP(n, PGSIZE);
+	char * temp_nextfree = nextfree + ROUNDUP(n, PGSIZE);
+	physaddr_t top_phys = npages * PGSIZE;
+	if (PADDR(temp_nextfree) > top_phys){
+	    panic ("Out of physical memory");
+	}
+
+	nextfree = temp_nextfree;
 	return result;
 }
 
@@ -165,7 +173,9 @@ mem_init(void)
 	// Your code goes here:
 
 	// todo: Use memset to initialize all fields of each struct PageInfo to 0.
-	pages = boot_alloc(npages * sizeof(struct PageInfo));
+	uint32_t pages_size = npages * sizeof(struct PageInfo);
+	pages = boot_alloc(pages_size);
+	memset(pages,0,pages_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -311,7 +321,7 @@ page_init(void)
         if (pa == 0){
             should_free = false;
         }
-        else if (pa >= PGSHIFT && pa < IOPHYSMEM){
+        else if (pa >= PGSIZE && pa < IOPHYSMEM){
             should_free = true;
         }
 
