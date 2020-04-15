@@ -109,6 +109,10 @@ boot_alloc(uint32_t n)
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 	}
 
+	if (n == 0){
+	    return nextfree;
+	}
+
 	// Allocate a chunk large enough to hold 'n' bytes, then update
 	// nextfree.  Make sure nextfree is kept aligned
 	// to a multiple of PGSIZE.
