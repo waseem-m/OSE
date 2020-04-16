@@ -469,10 +469,10 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		memset(pgtable_vadd, 0, PGSIZE); //not needed, added for clarity
 		*pde_vadd = PADDR(pgtable_vadd) | PTE_P | PTE_W;
 
-		new_pageinfo->pp_ref = 1;
+		new_pageinfo->pp_ref += 1;
 
-		result = pgtable_vadd; //todo: return the table, or the entry in the table?
-		//result = pgtable_vadd + pte_index;
+		//result = pgtable_vadd; //todo: return the table, or the entry in the table?
+		result = pgtable_vadd + pte_index;
 	} else { //not needed, added for clarity
 		result = NULL;
 	}
@@ -546,6 +546,16 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
+	//todo: va aligned, i think..
+
+	page_remove(pgdir,va); //if exists removes it and invalidates TLB, otherwise does nothing.
+	pte_t * new_entry = pgdir_walk(pgdir,va,1); //if entry exists returns it, otherwise creates new.
+	if(new_entry == NULL){
+		return -E_NO_MEM;
+	}
+	*new_entry = page2pa(pp) | perm | PTE_P;
+	pp->pp_ref += 1;
+
 	return 0;
 }
 
@@ -564,7 +574,25 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+
+	struct PageInfo * result = NULL;
+
+	//todo: do we need to round down here? and in previous functions (pgdir_walk and boot_map_region)?
+	pte_t * temp_pte = pgdir_walk(pgdir,va,0);
+	if (temp_pte == NULL){
+		return NULL;
+	}
+	if((*temp_pte) & PTE_P == 0){ //todo: is it possible? need check?
+		return NULL;
+	}
+
+	physaddr_t pa = PTE_ADDR(*temp_pte);
+	result = pa2page(pa);
+	if(pte_store!=0){
+		*pte_store = temp_pte;
+	}
+
+	return result;
 }
 
 //
@@ -586,6 +614,14 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+	pte_t * pte_removed = NULL;
+	struct PageInfo * removed_page = page_lookup(pgdir,va,&pte_removed);
+	if(removed_page == NULL){
+		return;
+	}
+	memset(pte_removed,0,PGSIZE);
+	page_decref(removed_page);
+	tlb_invalidate(pgdir,va);
 }
 
 //
