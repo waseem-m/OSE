@@ -119,8 +119,6 @@ boot_alloc(uint32_t n)
 	//
 	// LAB 2: Your code here.
 
-	// todo: If we're out of memory, boot_alloc should panic.
-
 
 	result = nextfree;
 	char * temp_nextfree = nextfree + ROUNDUP(n, PGSIZE);
@@ -176,7 +174,6 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 
-	// todo: Use memset to initialize all fields of each struct PageInfo to 0.
 	uint32_t pages_size = npages * sizeof(struct PageInfo);
 	pages = boot_alloc(pages_size);
 	memset(pages,0,pages_size);
@@ -271,7 +268,6 @@ mem_init(void)
 void
 page_init(void)
 {
-	// todo: what??
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
 	//  1) Mark physical page 0 as in use.
@@ -378,7 +374,7 @@ page_alloc(int alloc_flags)
     page_free_list = page_free_list->pp_link;
     result->pp_link = NULL;
 
-    if (alloc_flags && ALLOC_ZERO){
+    if (alloc_flags & ALLOC_ZERO){
         memset(page2kva(result),0,PGSIZE);
     }
 
@@ -452,7 +448,36 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+
+	uint32_t pde_index = PDX(va);
+	uint32_t pte_index = PTX(va);
+
+	pde_t* pde_vadd;
+	pte_t* pgtable_vadd;
+	pte_t* result = NULL;
+
+	pde_vadd = pgdir+pde_index;
+	if((*pde_vadd) & PTE_P){
+		pgtable_vadd = KADDR(PTE_ADDR(*pde_vadd));
+		result = pgtable_vadd + pte_index;
+	} else if (create == 1){
+		struct PageInfo * new_pageinfo = page_alloc(ALLOC_ZERO); //todo: alloc permissions?
+		if (new_pageinfo == NULL){
+			return NULL;
+		}
+		pgtable_vadd = KADDR(page2pa(new_pageinfo));
+		memset(pgtable_vadd, 0, PGSIZE); //not needed, added for clarity
+		*pde_vadd = PADDR(pgtable_vadd) | PTE_P | PTE_W;
+
+		new_pageinfo->pp_ref = 1;
+
+		result = pgtable_vadd; //todo: return the table, or the entry in the table?
+		//result = pgtable_vadd + pte_index;
+	} else { //not needed, added for clarity
+		result = NULL;
+	}
+
+	return result;
 }
 
 //
@@ -470,6 +495,26 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
+	//todo: why not change pp_ref?
+
+
+	uintptr_t page_afterlast = va + size;
+
+	pte_t *pte = NULL;
+
+	uintptr_t iter_vadd = va;
+	physaddr_t iter_padd =pa;
+
+	for(; iter_vadd<page_afterlast; iter_vadd+=PGSIZE,iter_padd+=PGSIZE){
+		pte = pgdir_walk(pgdir,iter_vadd,1);
+		if(pte == NULL){ //todo: need this panic check?
+			panic("pgdir_walk failed");
+		}
+		if(*pte & PTE_P){ //todo: need this panic check?
+			panic("boot_map_region remap (existing pte)");
+		}
+		*pte = iter_padd | perm | PTE_P;
+	}
 }
 
 //
