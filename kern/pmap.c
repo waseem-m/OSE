@@ -207,6 +207,9 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
+	boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U | PTE_P);
+  //boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
+
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
 	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
@@ -453,7 +456,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	uint32_t pte_index = PTX(va);
 
 	pde_t* pde_vadd;
-	pte_t* pgtable_vadd;
+	pte_t* pgtable_vadd = NULL;
 	pte_t* result = NULL;
 
 	pde_vadd = pgdir+pde_index;
@@ -465,13 +468,9 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		if (new_pageinfo == NULL){
 			return NULL;
 		}
-		pgtable_vadd = KADDR(page2pa(new_pageinfo));
-		memset(pgtable_vadd, 0, PGSIZE); //not needed, added for clarity
-		*pde_vadd = PADDR(pgtable_vadd) | PTE_P | PTE_W;
+		*pde_vadd = PTE_ADDR(page2pa(new_pageinfo)) | PTE_P | PTE_W; // todo: Maybe add PTE_U?
 
-		new_pageinfo->pp_ref += 1;
-
-		//result = pgtable_vadd; //todo: return the table, or the entry in the table?
+		new_pageinfo->pp_ref += 1; // todo: check if needed
 		result = pgtable_vadd + pte_index;
 	} else { //not needed, added for clarity
 		result = NULL;
@@ -506,14 +505,14 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	physaddr_t iter_padd =pa;
 
 	for(; iter_vadd<page_afterlast; iter_vadd+=PGSIZE,iter_padd+=PGSIZE){
-		pte = pgdir_walk(pgdir,iter_vadd,1);
-		if(pte == NULL){ //todo: need this panic check?
+		pte = pgdir_walk(pgdir,(void *) iter_vadd,1);
+		if(pte == NULL){ //todo: Piaza: need this panic check?
 			panic("pgdir_walk failed");
 		}
-		if(*pte & PTE_P){ //todo: need this panic check?
+		if(*pte & PTE_P){ //todo: Piaza: need this panic check?
 			panic("boot_map_region remap (existing pte)");
 		}
-		*pte = iter_padd | perm | PTE_P;
+		*pte = PTE_ADDR(iter_padd) | perm | PTE_P;
 	}
 }
 
@@ -582,7 +581,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	if (temp_pte == NULL){
 		return NULL;
 	}
-	if((*temp_pte) & PTE_P == 0){ //todo: is it possible? need check?
+	if(((*temp_pte) & PTE_P) == 0){
 		return NULL;
 	}
 
