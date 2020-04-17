@@ -194,8 +194,6 @@ mem_init(void)
 	check_page();
 	cprintf("\n STAGE 4 \n");
 
-	panic("\n=====STROP======\n");
-
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
 
@@ -207,8 +205,8 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
-	boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U | PTE_P);
-  //boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
+	size_t npages_size = ROUNDUP_PGSIZE(npages*sizeof(struct PageInfo));
+	boot_map_region(kern_pgdir, UPAGES, npages_size, PADDR(pages), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -222,6 +220,10 @@ mem_init(void)
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 
+	boot_map_region(kern_pgdir,  KSTACKTOP - KSTKSIZE, KSTKSIZE,(physaddr_t) PADDR(bootstack), PTE_P | PTE_W);
+	//boot_map_region(kern_pgdir,  KSTACKTOP-PTSIZE, PTSIZE - KSTKSIZE , bootstack, 0); // TODO: ask piaza
+
+
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
 	// Ie.  the VA range [KERNBASE, 2^32) should map to
@@ -230,6 +232,9 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+
+	uint64_t size = (1ull << 32) - KERNBASE;
+	boot_map_region(kern_pgdir, KERNBASE, (size_t) size ,0 , PTE_P | PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -302,14 +307,15 @@ page_init(void)
     cprintf("\n first_page: 0x%x", first_page);
     cprintf("\n base_mem_limit: 0x%x", base_mem_limit);
     cprintf("\n io_limit: 0x%x", io_limit);
-    cprintf("\n last_allocated: 0x%x", last_allocated);
 
+    cprintf("\n bootstack: %p", bootstack);
     cprintf("\n pages address: %p", pages);
     cprintf("\n pages array last: %p", &pages[npages]);
     cprintf("\n pages total: %p", npages);
+    cprintf("\n pages array size : %p", npages * sizeof (struct PageInfo));
     cprintf("\n total pages size: 0x%x", (npages * PGSIZE));
     cprintf("\n");
-}
+
 #endif
 
     physaddr_t last_allocated = (physaddr_t) ROUNDUP(((char *) PADDR(boot_alloc(0))), PGSIZE);
@@ -468,10 +474,11 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		if (new_pageinfo == NULL){
 			return NULL;
 		}
-		*pde_vadd = PTE_ADDR(page2pa(new_pageinfo)) | PTE_P | PTE_W; // todo: Maybe add PTE_U?
-
-		new_pageinfo->pp_ref += 1; // todo: check if needed
+		*pde_vadd = PTE_ADDR(page2pa(new_pageinfo)) | PTE_P | PTE_W | PTE_U; // todo: Maybe add PTE_U?
+		pgtable_vadd = KADDR(PTE_ADDR(*pde_vadd));
 		result = pgtable_vadd + pte_index;
+		new_pageinfo->pp_ref += 1; // todo: check if needed
+
 	} else { //not needed, added for clarity
 		result = NULL;
 	}
@@ -496,15 +503,15 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	// Fill this function in
 	//todo: why not change pp_ref?
 
-
-	uintptr_t page_afterlast = va + size;
+	uintptr_t page_afterlast = ROUNDOWN_PGSIZE(va + size - 1);
 
 	pte_t *pte = NULL;
 
 	uintptr_t iter_vadd = va;
 	physaddr_t iter_padd =pa;
 
-	for(; iter_vadd<page_afterlast; iter_vadd+=PGSIZE,iter_padd+=PGSIZE){
+
+	for(; iter_vadd<=page_afterlast; iter_vadd+=PGSIZE,iter_padd+=PGSIZE){
 		pte = pgdir_walk(pgdir,(void *) iter_vadd,1);
 		if(pte == NULL){ //todo: Piaza: need this panic check?
 			panic("pgdir_walk failed");
@@ -513,6 +520,9 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 			panic("boot_map_region remap (existing pte)");
 		}
 		*pte = PTE_ADDR(iter_padd) | perm | PTE_P;
+		if (iter_vadd == page_afterlast){
+		    break;
+		}
 	}
 }
 
@@ -547,13 +557,14 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Fill this function in
 	//todo: va aligned, i think..
 
+    pp->pp_ref += 1;
 	page_remove(pgdir,va); //if exists removes it and invalidates TLB, otherwise does nothing.
 	pte_t * new_entry = pgdir_walk(pgdir,va,1); //if entry exists returns it, otherwise creates new.
 	if(new_entry == NULL){
+	    pp->pp_ref -= 1;
 		return -E_NO_MEM;
 	}
-	*new_entry = page2pa(pp) | perm | PTE_P;
-	pp->pp_ref += 1;
+	*new_entry = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
 
 	return 0;
 }
@@ -618,7 +629,7 @@ page_remove(pde_t *pgdir, void *va)
 	if(removed_page == NULL){
 		return;
 	}
-	memset(pte_removed,0,PGSIZE);
+	*pte_removed = 0;
 	page_decref(removed_page);
 	tlb_invalidate(pgdir,va);
 }

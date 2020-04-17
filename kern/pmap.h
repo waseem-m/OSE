@@ -16,6 +16,8 @@ extern size_t npages;
 
 extern pde_t *kern_pgdir;
 
+#define ROUNDUP_PGSIZE(a) ROUNDUP(a,PGSIZE)
+#define ROUNDOWN_PGSIZE(a) ROUNDDOWN(a,PGSIZE)
 
 /* This macro takes a kernel virtual address -- an address that points above
  * KERNBASE, where the machine's maximum 256MB of physical memory is mapped --
