@@ -10,6 +10,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,7 +26,9 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display call stack", mon_backtrace },
-
+	{ "showmappings", "Show mapping in range. Format: [showmapping <address_start> <address_end>]", mon_showmapping},
+	{ "permmappings", "Change permissions. Format: [permmappings <va> <set/clear/flip> <u/w>]", mon_permmappings},
+	{ "dumpmem", "dump memory content. Format: [dumpmem <start_address> <end_address> <v/p>]", mon_dumpmem},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -88,6 +91,204 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+void print_va_mapping(uint32_t va, physaddr_t pa, const char* flags){
+    cprintf ("\nVA:0x%08x PA:0x%08x %s", va, pa, flags);
+}
+
+void print_va_has_no_mapping(uint32_t va){
+    cprintf ("\nVA:0x%08x PA: XXXXX", va);
+}
+
+#define perm_set    1 << 0
+#define perm_clear  1 << 1
+#define perm_flip   1 << 2
+
+int
+mon_permmappings(int argc, char **argv, struct Trapframe *tf){
+
+    int flags = 0;
+
+    if (argc < 3) {
+        cprintf("permmappings incorrect number of args. Correct format\n: [permmappings <address> <set/clear/flip> <u/w>]\n");
+        return 0;
+    }
+
+    char* endptr;
+    uint32_t va = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[1], &endptr, 0));
+    if (endptr != NULL && *endptr){
+        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        return 0;
+    }
+
+    if (strcmp("set",argv[2]) == 0){
+        flags |= perm_set;
+    }
+
+    else if (strcmp("clear",argv[2]) == 0){
+        flags |= perm_clear;
+    }
+
+    else if (strcmp("flip",argv[2]) == 0){
+        flags |= perm_flip;
+
+    } else {
+
+        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        return 0;
+    }
+
+    int mask = 0;
+    if (strcmp("u",argv[3]) == 0){
+        mask = PTE_U;
+    }
+
+    else if (strcmp("w",argv[3]) == 0){
+        mask = PTE_W;
+    }
+
+    else {
+        cprintf("coudln't parse arg3: %s\n", argv[3]);
+        return 0;
+    }
+
+    pde_t* pgdir = (pde_t*) KADDR( (physaddr_t) rcr3());
+    pte_t* pte = pgdir_walk(pgdir,(void *)(va),0);
+    if (!pte || ((*pte & PTE_P) == 0)){
+        cprintf("Address %p is not mapped\n", (void*) va);
+        return 0;
+    }
+
+    if (flags & perm_set){
+        *pte |= mask;
+    }
+    if (flags & perm_clear){
+        *pte &= ~mask;
+    }
+
+    if (flags & perm_flip){
+        *pte ^= mask;
+    }
+
+    return 0;
+}
+
+int
+mon_showmapping(int argc, char **argv, struct Trapframe *tf){
+
+    if (argc < 3) {
+        cprintf("showmapping incorrect args. Correct format\n: showmapping <address_start> <address_end>\n");
+        return 0;
+    }
+
+    char * endptr;
+    uint32_t va = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[1], &endptr, 0));
+    if (endptr != NULL && *endptr){
+        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        return 0;
+    }
+    uint32_t end_address = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[2], &endptr, 0)) + (PGSIZE - 1);
+    if (endptr != NULL && *endptr){
+        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        return 0;
+    }
+
+    pde_t* pgdir = (pde_t*) KADDR( (physaddr_t) rcr3());
+
+    cprintf("\n======");
+    cprintf("\nmon_showmapping");
+    cprintf("\n======");
+
+    while (va < end_address){
+
+        char flags_str[] = "RS";
+
+        pte_t* current_pte = pgdir_walk(pgdir,(void *)(va),0);
+
+        if (!current_pte || ((*current_pte & PTE_P) == 0)){
+            print_va_has_no_mapping(va);
+            goto end;
+        }
+
+        if (*current_pte & PTE_W){
+            flags_str[0] = 'W';
+        }
+
+        if (*current_pte & PTE_U){
+            flags_str[1] = 'U';
+        }
+
+        print_va_mapping(va, PTE_ADDR(*current_pte), flags_str);
+end:
+        va += PGSIZE;
+
+        // Check overfloww
+        if (va < PGSIZE){
+            break;
+        }
+
+    }
+
+    cprintf("\n\n");
+
+    return 0;
+}
+
+void dump(uint32_t start, uint32_t end, bool isVirtual){
+    uint32_t count = 0;
+    cprintf("\n\n===========");
+    cprintf("\nSTART OF DUMP");
+    cprintf("\n===========\n");
+    uint32_t value;
+    while (start < end ){
+        if (count++ % 4 == 0 ){
+            cprintf("\n 0x%08x: ", start);
+        }
+        memcpy(&value, isVirtual ? (void*) start :  KADDR(start), 4);
+        cprintf(" 0x%08x ", value);
+        start += 4;
+    }
+    cprintf("\n\n\n===========");
+    cprintf("\nEND OF DUMP");
+    cprintf("\n===========\n\n");
+
+}
+
+// TODO: over flow with command "dumpmem 0xfffffff0 0xffffffff v"
+
+int
+mon_dumpmem(int argc, char **argv, struct Trapframe *tf){
+
+    if (argc < 4) {
+        cprintf("dumpmem incorrect args. Correct format\n: dumpmem <start_address> <end_address> <v/p>\n");
+        return 0;
+    }
+
+    char * endptr;
+    uint32_t address_start = (uint32_t) strtol(argv[1], &endptr, 0);
+    if (endptr != NULL && *endptr){
+        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        return 0;
+    }
+    uint32_t address_end = (uint32_t) strtol(argv[2], &endptr, 0);
+    if (endptr != NULL && *endptr){
+        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        return 0;
+    }
+
+    bool isVirtual = false;
+    if (strcmp("v",argv[3]) == 0){
+        isVirtual = true;
+    } else if (strcmp("p",argv[3]) == 0){
+        isVirtual = false;
+    } else {
+        cprintf("coudln't parse arg3: %s\n", argv[3]);
+        return 0;
+    }
+
+    dump(address_start,address_end, isVirtual);
+
+    return 0;
+}
 
 
 /***** Kernel monitor command interpreter *****/
