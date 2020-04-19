@@ -116,7 +116,7 @@ mon_permmappings(int argc, char **argv, struct Trapframe *tf){
     char* endptr;
     uint32_t va = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[1], &endptr, 0));
     if (endptr != NULL && *endptr){
-        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        cprintf("couldn't parse arg1: %s\n", argv[1]);
         return 0;
     }
 
@@ -133,7 +133,7 @@ mon_permmappings(int argc, char **argv, struct Trapframe *tf){
 
     } else {
 
-        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        cprintf("couldn't parse arg2: %s\n", argv[2]);
         return 0;
     }
 
@@ -147,7 +147,7 @@ mon_permmappings(int argc, char **argv, struct Trapframe *tf){
     }
 
     else {
-        cprintf("coudln't parse arg3: %s\n", argv[3]);
+        cprintf("couldn't parse arg3: %s\n", argv[3]);
         return 0;
     }
 
@@ -183,12 +183,12 @@ mon_showmapping(int argc, char **argv, struct Trapframe *tf){
     char * endptr;
     uint32_t va = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[1], &endptr, 0));
     if (endptr != NULL && *endptr){
-        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        cprintf("couldn't parse arg1: %s\n", argv[1]);
         return 0;
     }
     uint32_t end_address = ROUNDOWN_PGSIZE((uint32_t) strtol(argv[2], &endptr, 0)) + (PGSIZE - 1);
     if (endptr != NULL && *endptr){
-        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        cprintf("couldn't parse arg2: %s\n", argv[2]);
         return 0;
     }
 
@@ -239,21 +239,42 @@ void dump(uint32_t start, uint32_t end, bool isVirtual){
     cprintf("\nSTART OF DUMP");
     cprintf("\n===========\n");
     uint32_t value;
-    while (start < end ){
+
+    uint32_t size = end - start + 1;
+    uint32_t size_leftover = size - ROUNDDOWN(size,4);
+    size -= size_leftover;
+
+    while (size > 0 ){
         if (count++ % 4 == 0 ){
             cprintf("\n 0x%08x: ", start);
         }
         memcpy(&value, isVirtual ? (void*) start :  KADDR(start), 4);
         cprintf(" 0x%08x ", value);
         start += 4;
+        size -= 4;
     }
+
+    if (size_leftover){
+        if (count++ % 4 == 0 ){
+            cprintf("\n 0x%08x: ", start);
+        }
+
+        cprintf(" 0x");
+        while (end >= start){
+            uint32_t val = *(uint8_t*) (isVirtual ? (void*) end :  KADDR(end));
+            cprintf("%02x",val);
+            if (end == 0){
+                break;
+            }
+            end--;
+        }
+    }
+
     cprintf("\n\n\n===========");
     cprintf("\nEND OF DUMP");
     cprintf("\n===========\n\n");
 
 }
-
-// TODO: over flow with command "dumpmem 0xfffffff0 0xffffffff v"
 
 int
 mon_dumpmem(int argc, char **argv, struct Trapframe *tf){
@@ -266,12 +287,17 @@ mon_dumpmem(int argc, char **argv, struct Trapframe *tf){
     char * endptr;
     uint32_t address_start = (uint32_t) strtol(argv[1], &endptr, 0);
     if (endptr != NULL && *endptr){
-        cprintf("coudln't parse arg1: %s\n", argv[1]);
+        cprintf("couldn't parse arg1: %s\n", argv[1]);
         return 0;
     }
     uint32_t address_end = (uint32_t) strtol(argv[2], &endptr, 0);
     if (endptr != NULL && *endptr){
-        cprintf("coudln't parse arg2: %s\n", argv[2]);
+        cprintf("couldn't parse arg2: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (address_end < address_start){
+        cprintf("end address small than start address\n");
         return 0;
     }
 
@@ -281,7 +307,7 @@ mon_dumpmem(int argc, char **argv, struct Trapframe *tf){
     } else if (strcmp("p",argv[3]) == 0){
         isVirtual = false;
     } else {
-        cprintf("coudln't parse arg3: %s\n", argv[3]);
+        cprintf("couldn't parse arg3: %s\n", argv[3]);
         return 0;
     }
 

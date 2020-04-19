@@ -221,8 +221,6 @@ mem_init(void)
 	// Your code goes here:
 
 	boot_map_region(kern_pgdir,  KSTACKTOP - KSTKSIZE, KSTKSIZE,(physaddr_t) PADDR(bootstack), PTE_P | PTE_W);
-	//boot_map_region(kern_pgdir,  KSTACKTOP-PTSIZE, PTSIZE - KSTKSIZE , bootstack, 0); // TODO: ask piaza
-
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -473,14 +471,14 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		pgtable_vadd = KADDR(PTE_ADDR(*pde_vadd));
 		result = pgtable_vadd + pte_index;
 	} else if (create == 1){
-		struct PageInfo * new_pageinfo = page_alloc(ALLOC_ZERO); //todo: alloc permissions?
+		struct PageInfo * new_pageinfo = page_alloc(ALLOC_ZERO);
 		if (new_pageinfo == NULL){
 			return NULL;
 		}
-		*pde_vadd = PTE_ADDR(page2pa(new_pageinfo)) | PTE_P | PTE_W | PTE_U; // todo: Maybe add PTE_U?
+		*pde_vadd = PTE_ADDR(page2pa(new_pageinfo)) | PTE_P | PTE_W | PTE_U;
 		pgtable_vadd = KADDR(PTE_ADDR(*pde_vadd));
 		result = pgtable_vadd + pte_index;
-		new_pageinfo->pp_ref += 1; // todo: check if needed
+		new_pageinfo->pp_ref += 1;
 
 	} else { //not needed, added for clarity
 		result = NULL;
@@ -504,7 +502,6 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
-	//todo: why not change pp_ref?
 
 	uintptr_t page_afterlast = ROUNDOWN_PGSIZE(va + size - 1);
 
@@ -516,10 +513,10 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 
 	for(; iter_vadd<=page_afterlast; iter_vadd+=PGSIZE,iter_padd+=PGSIZE){
 		pte = pgdir_walk(pgdir,(void *) iter_vadd,1);
-		if(pte == NULL){ //todo: Piaza: need this panic check?
+		if(pte == NULL){
 			panic("pgdir_walk failed");
 		}
-		if(*pte & PTE_P){ //todo: Piaza: need this panic check?
+		if(*pte & PTE_P){
 			panic("boot_map_region remap (existing pte)");
 		}
 		*pte = PTE_ADDR(iter_padd) | perm | PTE_P;
@@ -558,8 +555,6 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
-	//todo: va aligned, i think..
-
     pp->pp_ref += 1;
 	page_remove(pgdir,va); //if exists removes it and invalidates TLB, otherwise does nothing.
 	pte_t * new_entry = pgdir_walk(pgdir,va,1); //if entry exists returns it, otherwise creates new.
@@ -590,7 +585,6 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 
 	struct PageInfo * result = NULL;
 
-	//todo: do we need to round down here? and in previous functions (pgdir_walk and boot_map_region)?
 	pte_t * temp_pte = pgdir_walk(pgdir,va,0);
 	if (temp_pte == NULL){
 		return NULL;
