@@ -106,8 +106,8 @@ KERNBASE
 ===    Format example (all the values are made up; omit the header):
 ===    SIZE  DATA-STRUCTURE         NAME/DESCRIPTION
 ===    42    "struct Segdesc gdt[]" "Global descriptor table"
-256 "pte_t table[]" "page_tables"
-512 "struct PageInfo pages[]" "page info linked list"
+256 "pte_t table[]"				"page_tables"
+512 "struct PageInfo pages[]"	"page info linked list"
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
@@ -119,3 +119,28 @@ kern/monitor.c
 kern/monitor.h
 === Q Describe your solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
+we added 3 commands.
+For the "showmappings" and "permmappings" commands, in order to find the va-2-pa mapping we did the 
+page walk using the method: pgdir_walk, and than either change permission in the pte, or received 
+the correct frame address in order to print its content.
+1) showmappings. Format: [showmapping <address_start> <address_end>].
+   Go over each page in range (including last address round up to PGSIZE) and print
+   mapping to physical address + WU flags. Example:
+   showmappings 0xEFFFF000 0xf0000000:
+		VA:0xeffff000 PA:0x00118000 WS
+		VA:0xf0000000 PA:0x00000000 WS
+2) permmappings. Format: [permmappings <va> <set/clear/flip> <u/w>]
+   arg2 is set, clear or flip. arg3 is u or w.
+   We do the page walk to get pte entry and set flags accordingly.
+3) dumpmem. Format: [dumpmem <start_address> <end_address> <v/p>]
+   Writing 16 byte per line starting with start_address ending in end_address (including).
+   specify v/p for virtual or physical.
+   Arguments don't have to alligned.
+   Example: "dumpmem 1 14 p"
+   Result: "0x00000001:  0x53f000ff  0xc3f000ff  0x53f000e2  0x00ff".
+   If the address were virtual, we just printed their content, and if they were physical, we first converted
+   it to physical space.
+   In order to print unalligned addressed, we use memcpy into an integer variable.
+   If total size was not alligned to 4, we printed any leftover as another single number.
+   
+   
