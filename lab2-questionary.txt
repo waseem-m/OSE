@@ -53,6 +53,16 @@ uintptr_t
 ===    ...
 ===    42    0x98765 "struct Segdesc gdt[]" "Global descriptor table"
 ===    50    0x00011 ""                     "boot loader code"
+0      0x00000000	"" 						"unmapped"
+..
+955    0xEEC00000	"" 						"unmapped"
+956    0xEF000000   "struct PageInfo *" 	"pages array"
+957	   0xEF400000   "pde_t *" 				"pgdir"
+958    0xEF800000   "" 						"Memory-mapped I/O"
+959    0xEFC00000   "bootstack" 			"kernel stack"
+960    0xF0000000   "MEM" 					"Remapped Physical Memory"
+...
+1023   0xFFFFFFFF   "MEM" 					"Remapped Physical Memory"
 
 === Q We have placed the kernel and user environment in the same
 ===   address space. Why will user programs not be able to read or
@@ -70,16 +80,16 @@ NONE
 ===   level, PD or PT) after it has been set up by the kernel (and
 ===   before full TLB flush). What is the minimal N to gain full
 ===   control of the system from hacker's user space process?
-
+1
 === Q What's the maximum amount of physical memory this kernel can
 ===   support? (number of megabytes, without MB suffix)
-
+256
 === Q What single constant can be changed in kernel source to make
 ===   this limit 2 times lower (if kernel normally supports 10MB,
 ===   we want to make it support only 5MB?
-
+KERNBASE
 === Q What value should this constant be changed to?
-
+0xF8000000
 === Q Assume the computer has the maximum amount of memory supported
 ===   by the (unmodified) kernel. What's the overhead of managing this
 ===   memory in terms of (physical) memory spent?
@@ -96,14 +106,16 @@ NONE
 ===    Format example (all the values are made up; omit the header):
 ===    SIZE  DATA-STRUCTURE         NAME/DESCRIPTION
 ===    42    "struct Segdesc gdt[]" "Global descriptor table"
-
+256 "pte_t table[]" "page_tables"
+512 "struct PageInfo pages[]" "page info linked list"
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
-
+2
 === Q If the challenge requires changing the kernel source, list the
 ===   files which you have changed/added during implementation.
 ===   (one file per line, relative to lab directory containing .git/)
-
+kern/monitor.c
+kern/monitor.h
 === Q Describe your solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
