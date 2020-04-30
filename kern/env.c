@@ -116,6 +116,16 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
+    uint32_t index = 0;
+    env_free_list = envs;
+    for (index = 0 ; index < NENV - 1 ; index++){
+        envs[index].env_link = &envs[index+1];
+        envs[index].env_status = ENV_FREE;
+        envs[index].env_type = ENV_TYPE_USER;
+    }
+    envs[index].env_link = NULL;
+
+    // COMMENT: Index will will be handled in env_alloc
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
@@ -179,6 +189,12 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
+	p->pp_ref++;
+	e->env_pgdir = page2kva(p);
+    uint32_t pgdir_universal_size = PGSIZE - (PDX(UTOP) * sizeof(pde_t));
+    memcpy(&(e->env_pgdir[PDX(UTOP)]), &kern_pgdir[PDX(UTOP)], pgdir_universal_size);
+
+
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -267,6 +283,26 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+
+    va = ROUNDOWN_PGSIZE(va);
+    len = ROUNDUP_PGSIZE(len);
+
+    if (e == NULL){
+        panic ("region_alloc e null");
+    }
+
+    if (len == 0){
+        return; // TODO: panic?
+    }
+
+    struct PageInfo *p = NULL;
+    while(len){
+        if (!(p = page_alloc(0))) // Don't use ALLOC_ZERO flag
+            panic("region_alloc could not allocate page");
+        page_insert(e->env_pgdir, p, va, PTE_W | PTE_U); // PTE_P Will be be add in page_insert
+        va += PGSIZE;
+        len -= PGSIZE;
+    }
 }
 
 //
