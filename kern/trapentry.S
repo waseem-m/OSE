@@ -43,6 +43,32 @@
 
 .text
 
+TRAPHANDLER_NOEC(divide_handler,T_DIVIDE)          //   0	  // divide error
+TRAPHANDLER_NOEC(debug_handler,T_DEBUG)            //   1	  // debug exception
+TRAPHANDLER_NOEC(nmi_handler,T_NMI)                //   2	  // non-maskable interrupt
+TRAPHANDLER_NOEC(brkpt_handler,T_BRKPT)            //   3	  // breakpoint
+TRAPHANDLER_NOEC(oflow_handler,T_OFLOW)            //   4	  // overflow
+TRAPHANDLER_NOEC(bound_handler,T_BOUND)            //   5      // bounds check
+TRAPHANDLER_NOEC(illop_handler,T_ILLOP)            //   6      // illegal opcode
+TRAPHANDLER_NOEC(device_handler,T_DEVICE)          //   7      // device not available
+
+TRAPHANDLER(dblflt_handler,T_DBLFLT)               //   8      // double fault
+TRAPHANDLER(tss_handler,T_TSS)                     //  10      // invalid task switch segment
+TRAPHANDLER(segnp_handler,T_SEGNP)                 //  11      // segment not present
+TRAPHANDLER(stack_handler,T_STACK)                 //  12      // stack exception
+TRAPHANDLER(gpflt_handler,T_GPFLT)                 //  13      // general protection fault
+TRAPHANDLER(pgflt_handler,T_PGFLT)                 //  14      // page fault
+
+TRAPHANDLER_NOEC(fperr_handler,T_FPERR)            //  16      // floating point error
+
+TRAPHANDLER(align_handler,T_ALIGN)            	   //  17	  // aligment check
+
+TRAPHANDLER_NOEC(mchk_handler,T_MCHK)              //  18	  // machine check
+TRAPHANDLER_NOEC(simderr_handler,T_SIMDERR)        //  19	  // SIMD floating point error
+
+//TODO: syscall trap
+TRAPHANDLER_NOEC(syscall_handler,T_SYSCALL)        //  ??	  // System Call
+
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
@@ -53,3 +79,17 @@
  * Lab 3: Your code here for _alltraps
  */
 
+ _alltraps:
+  # Build trap frame.
+  pushl %ds
+  pushl %es
+  pushal
+
+  # Set up data and per-cpu segments.
+  movw $(GD_KD), %ax
+  movw %ax, %ds
+  movw %ax, %es
+
+  # Call trap(tf), where tf=%esp
+  pushl %esp
+  call trap

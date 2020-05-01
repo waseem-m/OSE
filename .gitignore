@@ -31,3 +31,4 @@ cscope.*
 /gdb.txt
 /gdb_commands.txt
 /gdb_history.txt
+/.gdb_history
