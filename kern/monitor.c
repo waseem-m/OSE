@@ -31,8 +31,8 @@ static struct Command commands[] = {
 	{ "showmappings", "Show mapping in range. Format: [showmapping <address_start> <address_end>]", mon_showmapping},
 	{ "permmappings", "Change permissions. Format: [permmappings <va> <set/clear/flip> <u/w>]", mon_permmappings},
 	{ "dumpmem", "dump memory content. Format: [dumpmem <start_address> <end_address> <v/p>]", mon_dumpmem},
-	{ "continue", "continue", mon_continue_execution},
-	{ "single", "continue", mon_single_step},
+	{ "continue", "continue running current environment without breaking", mon_continue_execution},
+	{ "step", "step one instruction in current environment", mon_step},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -49,12 +49,12 @@ mon_continue_execution(int argc, char **argv, struct Trapframe *tf){
 }
 
 int
-mon_single_step(int argc, char **argv, struct Trapframe *tf){
+mon_step(int argc, char **argv, struct Trapframe *tf){
     if (tf != NULL){
         tf->tf_eflags |= FL_TF;
         env_pop_tf(tf);
     }
-    panic("mon_continue: should not reach here");
+    panic("mon_step: should not reach here");
     return 0;
 }
 

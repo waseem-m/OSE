@@ -34,7 +34,7 @@ The dpl (descriptor privilege level) of interrupt 14 descriptor is 0 so it invok
 ===   instruction to invoke the kernel's page fault handler (which is
 ===   interrupt vector 14)?
 ===   (free form, 1 sentence)
-Current environment will be destoryed.
+Current environment will be destoryed. Resume from kernel's monitor.
 === Q The break point test case will either generate a break point
 ===   exception or a general protection fault depending on how you
 ===   initialized the break point entry in the IDT (i.e., your call to
@@ -43,22 +43,29 @@ Current environment will be destoryed.
 ===   above and what incorrect setup would cause it to trigger a
 ===   general protection fault?
 ===   (free form)
-
+We need to set the dpl (descriptor privilege level) of interrupt 3 descriptor to 3 to allow user access.
 === Q What do you think is the point of these mechanisms, particularly
 ===   in light of what the user/softint test program does? 
 ===   (free form, 1 sentence)
-
+protect the CPU from  malicious and hazardous actions by the user
 === Q In Exercise 9, what causes the page fault which panics the
 ===   kernel when running user/breakpoint?
 ===   (free form, 1 sentence)
-
+Backtrace read 5 arguments. lib\Entry.S pushes only 2 arguments, and when we read the third, we get page fault because we access USTACKTOP (not mapped).
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
-
+2
 === Q If the challenge requires changing the kernel source, list the
 ===   files which you have changed/added during implementation.
 ===   (one file per line, relative to lab directory containing .git/)
-
+monitor.h
+monitor.c
+trap.c
 === Q Describe you solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
+We added 2 commands in monitor.c:
+(1) "step" - which set the trap flag in the trap frame and then runs the environment in the trap frame.
+(2) "continue" - which just run the trap's environment wihtout adjusting the trap flag (run as usual).
+when setting the trap flag, the program run a single instruction, and then the HW will generate interrupt #1(DEBUG).
+In this case we will call the monitor to give the user control over how to proceed.
