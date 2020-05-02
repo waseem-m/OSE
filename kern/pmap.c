@@ -681,6 +681,24 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	//TODO: check edge cases
+
+	void * start_address = (void *)ROUNDOWN_PGSIZE(va);
+	void * last_page_address = (void *)ROUNDOWN_PGSIZE(((char*)va)+len);
+	pte_t * pte_walk = NULL;
+	char* iter = NULL;
+	for (iter = (char*)start_address; iter <= (char*)last_page_address; iter = iter + PGSIZE){
+		pte_walk = pgdir_walk(env->env_pgdir,iter,0);
+		if(((uintptr_t)iter) >= ULIM || pte_walk == NULL || !((*pte_walk)&perm)){
+			user_mem_check_addr = (uintptr_t)iter;
+
+			if(iter == start_address){//TODO: try for make grade
+				user_mem_check_addr = (uintptr_t)va;
+			}
+
+			return -E_FAULT;
+		}
+	}
 
 	return 0;
 }
