@@ -286,33 +286,26 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
 
-    len = ROUNDUP_PGSIZE(((uint32_t)va) + len); // TODO: overflow when va = 0, len = maxint
+    if (len == 0){
+        return;
+    }
+
+    len = ROUNDUP_PGSIZE(((uint32_t)va) + len);
     va = ROUNDOWN_PGSIZE(va);
     len -= ((uint32_t)va);
-
-    /* TODO: Remove
-    if (va + len > ROUNDUP_PGSIZE(va)){
-        len += PGSIZE;
-    }
-    len = ROUNDUP_PGSIZE(len);
-    */
 
     if (e == NULL){
         panic ("region_alloc e null. %e", -E_INVAL);
     }
 
-    if (len == 0){
-        return; // TODO: panic?
-    }
-
     struct PageInfo *p = NULL;
-    while(len){
+    do{
         if (!(p = page_alloc(0))) // Don't use ALLOC_ZERO flag
-            panic("region_alloc could not allocate page", -E_NO_MEM);
+            panic("region_alloc could not allocate page. %e", -E_NO_MEM);
         page_insert(e->env_pgdir, p, va, PTE_W | PTE_U); // PTE_P Will be be add in page_insert
         va += PGSIZE;
         len -= PGSIZE;
-    }
+    } while(len);
 }
 
 //
@@ -419,9 +412,7 @@ env_create(uint8_t *binary, enum EnvType type)
     if (env_alloc(&new_env,0) < 0 ){
         panic ("env_create: env_alloc failed. %e", E_NO_FREE_ENV);
     }
-    cprintf("\nDEBUG_100\n");
     load_icode(new_env, binary);
-    cprintf("\nDEBUG_101\n");
     new_env->env_type = type;
 
 }
@@ -544,9 +535,9 @@ env_run(struct Env *e)
         panic ("env_run: e = NULL. %e", -E_INVAL);
     }
 
-    bool context_switch = curenv != e; // TODO: Compare with unique id?
+    bool context_switch = curenv && (curenv->env_id != e->env_id);
 
-    if (context_switch && curenv != NULL){
+    if (context_switch){
         curenv->env_status = ENV_RUNNABLE;
     }
 

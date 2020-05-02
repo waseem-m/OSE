@@ -66,8 +66,7 @@ TRAPHANDLER(align_handler,T_ALIGN)            	   //  17	  // aligment check
 TRAPHANDLER_NOEC(mchk_handler,T_MCHK)              //  18	  // machine check
 TRAPHANDLER_NOEC(simderr_handler,T_SIMDERR)        //  19	  // SIMD floating point error
 
-//TODO: syscall trap
-TRAPHANDLER_NOEC(syscall_handler,T_SYSCALL)        //  ??	  // System Call
+TRAPHANDLER_NOEC(syscall_handler,T_SYSCALL)        //  48	  // System Call
 
 /*
  * Lab 3: Your code here for generating entry points for the different traps.

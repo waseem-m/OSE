@@ -31,7 +31,8 @@ static struct Command commands[] = {
 	{ "showmappings", "Show mapping in range. Format: [showmapping <address_start> <address_end>]", mon_showmapping},
 	{ "permmappings", "Change permissions. Format: [permmappings <va> <set/clear/flip> <u/w>]", mon_permmappings},
 	{ "dumpmem", "dump memory content. Format: [dumpmem <start_address> <end_address> <v/p>]", mon_dumpmem},
-	{ "c", "continue", mon_continue},
+	{ "continue", "continue", mon_continue_execution},
+	{ "single", "continue", mon_single_step},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -39,9 +40,20 @@ static struct Command commands[] = {
 
 
 int
-mon_continue(int argc, char **argv, struct Trapframe *tf){
-    tf->tf_eflags |= FL_TF;
-    env_pop_tf(tf);
+mon_continue_execution(int argc, char **argv, struct Trapframe *tf){
+    if (tf != NULL){
+        env_pop_tf(tf);
+    }
+    panic("mon_continue: should not reach here");
+    return 0;
+}
+
+int
+mon_single_step(int argc, char **argv, struct Trapframe *tf){
+    if (tf != NULL){
+        tf->tf_eflags |= FL_TF;
+        env_pop_tf(tf);
+    }
     panic("mon_continue: should not reach here");
     return 0;
 }
@@ -99,6 +111,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
         ebp = ebp_as_array[0];
 
     }
+    cprintf("\n");
 
 	return 0;
 }

@@ -65,7 +65,8 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	//TODO: set istrap param correctly.
+	//TODO: set istrap param correctly. Currently set to interrupt, as
+	//      no synchronization is implemented
 	SETGATE(idt[T_DIVIDE],0,GD_KT,divide_handler,0);
 	SETGATE(idt[T_DEBUG],0,GD_KT,debug_handler,0);
 	SETGATE(idt[T_NMI],0,GD_KT,nmi_handler,0);
@@ -88,7 +89,6 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT,mchk_handler, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT,simderr_handler, 0);
 
-	//TODO: syscall
 	SETGATE(idt[T_SYSCALL], 0, GD_KT,syscall_handler, 3);
 	
 
@@ -255,9 +255,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-	// TODO: if kernel page fault, PANIC!
 	if((tf->tf_cs & 3) == 0){
-		panic("page_fault_handler: Kernel Page Fault!");
+	    print_trapframe(tf);
+	    panic("page_fault_handler: Kernel Page Fault on page 0x%08x!",fault_va);
 	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,

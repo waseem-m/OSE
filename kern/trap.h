@@ -39,7 +39,6 @@ void fperr_handler ();
 void align_handler ();
 void mchk_handler ();
 void simderr_handler ();
-//TODO: syscall
 void syscall_handler ();
 
 #endif /* JOS_KERN_TRAP_H */
