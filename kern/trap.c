@@ -72,6 +72,32 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	//TODO: set istrap param correctly. Currently set to interrupt, as
+	//      no synchronization is implemented
+	SETGATE(idt[T_DIVIDE],0,GD_KT,divide_handler,0);
+	SETGATE(idt[T_DEBUG],0,GD_KT,debug_handler,0);
+	SETGATE(idt[T_NMI],0,GD_KT,nmi_handler,0);
+
+	SETGATE(idt[T_BRKPT],0,GD_KT,brkpt_handler,3);
+
+	SETGATE(idt[T_OFLOW], 0, GD_KT,oflow_handler, 0);
+	SETGATE(idt[T_BOUND], 0, GD_KT,bound_handler, 0);
+	SETGATE(idt[T_ILLOP], 0, GD_KT,illop_handler, 0);
+	SETGATE(idt[T_DEVICE], 0, GD_KT,device_handler, 0);
+
+	SETGATE(idt[T_DBLFLT], 0, GD_KT,dblflt_handler, 0);
+	SETGATE(idt[T_TSS], 0, GD_KT,tss_handler, 0);
+	SETGATE(idt[T_SEGNP], 0, GD_KT,segnp_handler, 0);
+	SETGATE(idt[T_STACK], 0, GD_KT,stack_handler, 0);
+	SETGATE(idt[T_GPFLT], 0, GD_KT,gpflt_handler, 0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT,pgflt_handler, 0);
+	SETGATE(idt[T_FPERR], 0, GD_KT,fperr_handler, 0);
+	SETGATE(idt[T_ALIGN], 0, GD_KT,align_handler, 0);
+	SETGATE(idt[T_MCHK], 0, GD_KT,mchk_handler, 0);
+	SETGATE(idt[T_SIMDERR], 0, GD_KT,simderr_handler, 0);
+
+	SETGATE(idt[T_SYSCALL], 0, GD_KT,syscall_handler, 3);
+	
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -174,6 +200,32 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 
+    struct PushRegs* regs;
+
+    switch (tf->tf_trapno){
+        case T_SYSCALL:
+            regs = &(tf->tf_regs);
+            regs->reg_eax = syscall(regs->reg_eax,
+                                    regs->reg_edx,
+                                    regs->reg_ecx,
+                                    regs->reg_ebx,
+                                    regs->reg_edi,
+                                    regs->reg_esi);
+            return;
+        case T_DEBUG:
+            monitor(tf);
+            return;
+        case T_PGFLT:
+            page_fault_handler(tf);
+            return;
+        case T_BRKPT:
+            monitor(tf);
+            return;
+        default:
+            break;
+    }
+
+
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
 	// IRQ line or other reasons. We don't care.
@@ -268,6 +320,10 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	if((tf->tf_cs & 3) == 0){
+	    print_trapframe(tf);
+	    panic("page_fault_handler: Kernel Page Fault on page 0x%08x!",fault_va);
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
