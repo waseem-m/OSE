@@ -99,14 +99,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
             cprintf(" %08x", ebp_as_array[i]);
         cprintf("\n");
 
-        struct Eipdebuginfo info;
-        debuginfo_eip(eip , &info);
-        int name_length = strfind(info.eip_fn_name,':') - info.eip_fn_name;
-        cprintf("       %s:%d: %.*s+%d\n", info.eip_file,
-                                           info.eip_line,
-                                           name_length,
-                                           info.eip_fn_name,
-                                           (int) eip - (int) info.eip_fn_addr);
+        mon_va_info(eip);
 
         ebp = ebp_as_array[0];
 
@@ -114,6 +107,17 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
     cprintf("\n");
 
 	return 0;
+}
+
+void mon_va_info(uintptr_t va){
+    struct Eipdebuginfo info;
+    debuginfo_eip(va , &info);
+    int name_length = strfind(info.eip_fn_name,':') - info.eip_fn_name;
+    cprintf("       %s:%d: %.*s+%d\n", info.eip_file,
+                                       info.eip_line,
+                                       name_length,
+                                       info.eip_fn_name,
+                                       (int) va - (int) info.eip_fn_addr);
 }
 
 void print_va_mapping(uint32_t va, physaddr_t pa, const char* flags){

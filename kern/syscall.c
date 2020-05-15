@@ -274,6 +274,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	switch (syscallno) {
 
+	    case SYS_yield:
+	        sys_yield();
+	        return 0;
+
 	    case SYS_cputs:
 	        sys_cputs((const char *)a1,a2);
 	        return 0;

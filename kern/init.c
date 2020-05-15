@@ -52,6 +52,7 @@ i386_init(void)
 	// Your code here:
 
 	// Starting non-boot CPUs
+	lock_kernel();
 	boot_aps();
 
 #if defined(TEST)
@@ -59,7 +60,9 @@ i386_init(void)
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_primes, ENV_TYPE_USER);
+	//ENV_CREATE(user_yield, ENV_TYPE_USER);
+	//ENV_CREATE(user_yield, ENV_TYPE_USER);
+	//ENV_CREATE(user_yield, ENV_TYPE_USER);
 #endif // TEST*
 
 	// Schedule and run the first user environment!
@@ -109,6 +112,8 @@ mp_main(void)
 	lapic_init();
 	env_init_percpu();
 	trap_init_percpu();
+	//cprintf("&thiscpu : %p ID: %d\n", thiscpu, thiscpu->cpu_id);
+	uint8_t cpu_id = thiscpu->cpu_id;
 	xchg(&thiscpu->cpu_status, CPU_STARTED); // tell boot_aps() we're up
 
 	// Now that we have finished some basic setup, call sched_yield()
@@ -118,7 +123,8 @@ mp_main(void)
 	// Your code here:
 
 	// Remove this after you finish Exercise 4
-	for (;;);
+	lock_kernel();
+	sched_yield();
 }
 
 /*
@@ -148,10 +154,10 @@ _panic(const char *file, int line, const char *fmt,...)
 	vcprintf(fmt, ap);
 	cprintf("\n");
 	va_end(ap);
-/*
+
 	cprintf("\n\n");
 	mon_backtrace(0,0,0);
-*/
+
 
 dead:
 	/* break into the kernel monitor */

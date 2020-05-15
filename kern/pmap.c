@@ -239,7 +239,8 @@ mem_init(void)
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 
-	boot_map_region(kern_pgdir,  KSTACKTOP - KSTKSIZE, KSTKSIZE,(physaddr_t) PADDR(bootstack), PTE_P | PTE_W);
+    // COMMENT: removed because will be handled in mem_init_mp
+	//boot_map_region(kern_pgdir,  KSTACKTOP - KSTKSIZE, KSTKSIZE,(physaddr_t) PADDR(bootstack), PTE_P | PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -303,6 +304,12 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
+    physaddr_t current_stack_top = KSTACKTOP;
+    int cpu_idx = 0;
+    do {
+        boot_map_region(kern_pgdir,  current_stack_top - KSTKSIZE, KSTKSIZE,(physaddr_t) PADDR(percpu_kstacks[cpu_idx]), PTE_W);
+        current_stack_top -= (KSTKSIZE + KSTKGAP);
+    } while (++cpu_idx < NCPU);
 
 }
 
@@ -345,7 +352,7 @@ page_init(void)
 
     page_free_list = NULL;
 
-#if 0
+#if 1
     char * pEXTPHYSMEM = (char*) EXTPHYSMEM;
 
     physaddr_t zero = 0;
@@ -379,6 +386,11 @@ page_init(void)
         if (pa == 0){
             should_free = false;
         }
+
+        else if (pa == MPENTRY_PADDR){
+            should_free = false;
+        }
+
         else if (pa >= PGSIZE && pa < IOPHYSMEM){
             should_free = true;
         }
@@ -723,7 +735,17 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+
+	// Roundup to page and check for limitation
+	size = ROUNDUP_PGSIZE(size);
+	if (base + size > MMIOLIM || base + size < base){
+	    panic ("mmio_map_region: not enough space in MMIOBASE");
+	}
+
+	boot_map_region(kern_pgdir,base,size,pa, PTE_PCD|PTE_PWT|PTE_W);
+	void* result = (void*) base;
+	base += size;
+	return result;
 }
 
 static uintptr_t user_mem_check_addr;
@@ -857,6 +879,8 @@ check_page_free_list(bool only_low_memory)
 
 	assert(nfree_basemem > 0);
 	assert(nfree_extmem > 0);
+
+	cprintf("check_page_free_list(%s) succeeded!\n", only_low_memory ? "only_low_memory" : "high_memory");
 }
 
 //
