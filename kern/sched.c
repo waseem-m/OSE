@@ -36,14 +36,14 @@ sched_yield(void)
 	    env_id = ENVX(curenv->env_id);
 	}
 
-	for( current_env_id = (env_id + 1) % NENV ; current_env_id != env_id ; current_env_id++){
+	for( current_env_id = (env_id + 1) % NENV ; current_env_id != env_id ; current_env_id = (current_env_id + 1) % NENV){
 
-	    if (envs[current_env_id].env_status == ENV_RUNNING){
+	    if (envs[current_env_id].env_status == ENV_RUNNABLE){
 	        env_run(&envs[current_env_id]);
 	    }
 	}
 
-	if (curenv->env_status == ENV_RUNNING){
+	if (curenv && curenv->env_status == ENV_RUNNING){
 	    env_run(curenv);
 	}
 
