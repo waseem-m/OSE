@@ -134,7 +134,7 @@ trap_init_percpu(void)
 	// when we trap to the kernel.
     uint8_t cpu_id =  thiscpu->cpu_id;
     int gdt_id = (GD_TSS0 >> 3) + cpu_id;
-    thiscpu->cpu_ts.ts_esp0 = (uintptr_t) &percpu_kstacks[cpu_id];
+    thiscpu->cpu_ts.ts_esp0 = (uintptr_t) percpu_kstacks[cpu_id];
     thiscpu->cpu_ts.ts_ss0 = GD_KD;
 
 	// Initialize the TSS slot of the gdt.

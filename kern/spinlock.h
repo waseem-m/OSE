@@ -27,16 +27,27 @@ void spin_unlock(struct spinlock *lk);
 
 extern struct spinlock kernel_lock;
 
+static uint64_t lock_count = 0;
+
 static inline void
 lock_kernel(void)
 {
 	spin_lock(&kernel_lock);
+	if (lock_count > 0){
+	    int x = 1;
+	}
+    lock_count++;
 }
+
 
 static inline void
 unlock_kernel(void)
 {
 	spin_unlock(&kernel_lock);
+    if (lock_count  == 0 ){
+        int x = 1;
+    }
+    lock_count--;
 
 	// Normally we wouldn't need to do this, but QEMU only runs
 	// one CPU at a time and has a long time-slice.  Without the
