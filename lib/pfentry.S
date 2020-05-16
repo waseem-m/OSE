@@ -64,19 +64,65 @@ _pgfault_upcall:
 	// may find that you have to rearrange your code in non-obvious
 	// ways as registers become unavailable as scratch space.
 	//
+
+/*
+	UTrapframe break down:
+
+	uint32_t utf_fault_va;   // 0
+	uint32_t utf_err; 		 // 4
+
+	// struct PushRegs utf_regs;
+	uint32_t reg_edi;		 // 8
+	uint32_t reg_esi;  		 // 12
+	uint32_t reg_ebp;		 // 16
+	uint32_t reg_oesp;		 // 20
+	uint32_t reg_ebx;		 // 24
+	uint32_t reg_edx;		 // 28
+	uint32_t reg_ecx;		 // 32
+	uint32_t reg_eax;		 // 36
+	// end of utf_regs
+
+	uintptr_t utf_eip;		 // 40
+	uint32_t utf_eflags;	 // 44
+	uintptr_t utf_esp;		 // 48
+*/
+
 	// LAB 4: Your code here.
+
+	//   ... So instead, we push the trap-time %eip onto the *trap-time* stack!
+	//   Below we'll switch to that stack and call 'ret', which will
+	//   restore %eip to its pre-fault value.
+
+
+	// store EIP and ESP
+	movl 48(%esp)   , %eax   // ESP
+	movl 40(%esp)   , %ebx   // EIP
+
+	// switch ESP
+	movl %eax		, 48(%esp)
+
+	// push EIP
+	movl %ebx       , 52(%esp)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
 
+	// go to start of register push
+	addl $-40, %esp
+	popal
+
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
 	// LAB 4: Your code here.
+	addl $4, %esp // skip eip
+	popfl
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
+	popl %esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
+	ret

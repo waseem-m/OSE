@@ -374,14 +374,14 @@ page_fault_handler(struct Trapframe *tf)
 	if (curenv->env_pgfault_upcall != NULL && esp_is_valid){
 
 	    // check that the handler is valid (read only). TODO: Not sure if needed.
-	    user_mem_assert(curenv, curenv->env_pgfault_upcall, sizeof(uintptr_t), 0);
+	    //user_mem_assert(curenv, curenv->env_pgfault_upcall, sizeof(uintptr_t), 0);
 
 	    uintptr_t utf_ptr = tf->tf_esp < USTACKTOP ? UXSTACKTOP : tf->tf_esp - 4;
 	    utf_ptr -=  sizeof(struct UTrapframe);
 	    struct UTrapframe* utf = (struct UTrapframe*) utf_ptr;
 
 	    // check if the environment allocated a page for the exception stack.
-	    user_mem_assert(curenv, (void*) (UXSTACKTOP - PTSIZE), PTSIZE, PTE_W);
+	    user_mem_assert(curenv, (void*) (UXSTACKTOP - PGSIZE), PGSIZE, PTE_W);
 
 	    utf->utf_eip = tf->tf_eip;
 	    utf->utf_esp = tf->tf_esp;
