@@ -362,6 +362,42 @@ page_fault_handler(struct Trapframe *tf)
 	// LAB 4: Your code here.
 
 	// Destroy the environment that caused the fault.
+
+	uintptr_t curr_stack = tf->tf_esp;
+	bool esp_is_valid = false;
+	if ((UXSTACKTOP - PGSIZE  < curr_stack && curr_stack < UXSTACKTOP) ||
+	    (USTACKTOP - PTSIZE  < curr_stack && curr_stack < USTACKTOP)){
+	    esp_is_valid = true;
+	}
+
+
+	if (curenv->env_pgfault_upcall != NULL && esp_is_valid){
+
+	    // check that the handler is valid (read only). TODO: Not sure if needed.
+	    user_mem_assert(curenv, curenv->env_pgfault_upcall, sizeof(uintptr_t), 0);
+
+	    uintptr_t utf_ptr = tf->tf_esp < USTACKTOP ? UXSTACKTOP : tf->tf_esp - 4;
+	    utf_ptr -=  sizeof(struct UTrapframe);
+	    struct UTrapframe* utf = (struct UTrapframe*) utf_ptr;
+
+	    // check if the environment allocated a page for the exception stack.
+	    user_mem_assert(curenv, UXSTACKTOP - PTSIZE, PTSIZE, PTE_W);
+
+	    utf->utf_eip = tf->tf_eip;
+	    utf->utf_esp = tf->tf_esp;
+	    utf->utf_eflags = tf->tf_eflags;
+	    utf->utf_err = tf->tf_err;
+	    utf->utf_regs = tf->tf_regs;
+	    utf->utf_fault_va = fault_va;
+
+	    tf->tf_esp = (uintptr_t) utf;
+	    tf->tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+
+	    env_run(curenv);
+
+	}
+
+
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
 	print_trapframe(tf);
