@@ -381,7 +381,7 @@ page_fault_handler(struct Trapframe *tf)
 	    struct UTrapframe* utf = (struct UTrapframe*) utf_ptr;
 
 	    // check if the environment allocated a page for the exception stack.
-	    user_mem_assert(curenv, UXSTACKTOP - PTSIZE, PTSIZE, PTE_W);
+	    user_mem_assert(curenv, (void*) (UXSTACKTOP - PTSIZE), PTSIZE, PTE_W);
 
 	    utf->utf_eip = tf->tf_eip;
 	    utf->utf_esp = tf->tf_esp;
