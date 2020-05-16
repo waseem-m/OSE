@@ -98,18 +98,20 @@ _pgfault_upcall:
 	movl 48(%esp)   , %eax   // ESP
 	movl 40(%esp)   , %ebx   // EIP
 
-	// switch ESP
+	// push EIP
+	subl $4			, %eax
+	movl %ebx       , (%eax)
+
+	// update top ESP
 	movl %eax		, 48(%esp)
 
-	// push EIP
-	movl %ebx       , 52(%esp)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
 
-	// go to start of register push
-	addl $-40, %esp
+	// go to start of register push and pop all registers
+	addl $8, %esp
 	popal
 
 	// Restore eflags from the stack.  After you do this, you can
