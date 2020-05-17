@@ -86,10 +86,15 @@ The kernel will destroy the environment that caused the fault.
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
-
+6
 === Q If the challenge requires changing the kernel source, list the
 ===   files which you have changed/added during implementation.
 ===   (one file per line, relative to lab directory containing .git/)
-
+inc/lib.h
+lib/fork.c
+lib/libmain.c
+lib/pgfault.c
+user/dumbfork.c
+user/pingpong.c
 === Q Describe you solution.
 ===   (free form, up to 500 words, don't need to use all 500!)

@@ -156,7 +156,6 @@ fork(void)
         // The copied value of the global variable 'thisenv'
         // is no longer valid (it refers to the parent!).
         // Fix it and return 0.
-        thisenv = &envs[ENVX(sys_getenvid())];
         return 0;
     }
 
@@ -197,6 +196,67 @@ fork(void)
 int
 sfork(void)
 {
-	panic("sfork not implemented");
-	return -E_INVAL;
+    envid_t envid;
+    uint8_t *addr;
+    int result;
+
+    set_pgfault_handler(pgfault);
+
+    // Allocate a new child environment.
+    // The kernel will initialize it with a copy of our register state,
+    // so that the child will appear to have called sys_exofork() too -
+    // except that in the child, this "fake" call to sys_exofork()
+    // will return 0 instead of the envid of the child.
+    envid = sys_exofork();
+    if (envid < 0)
+        panic("sys_exofork: %e", envid);
+    if (envid == 0) {
+        // We're the child.
+        // The copied value of the global variable 'thisenv'
+        // is no longer valid (it refers to the parent!).
+        // Fix it and return 0.
+        return 0;
+    }
+
+    // We're the parent.
+    unsigned page;
+    for (page = 0; page < PGNUM(UTOP); page += 1){
+
+        if (page == PGNUM(USTACKTOP - PGSIZE)){
+            continue;
+        }
+
+        if (page == PGNUM(UXSTACKTOP - PGSIZE)){
+            continue;
+        }
+        uintptr_t address = page << 12;
+
+        pde_t pde = uvpd[page >> 10];
+        if ((pde & PTE_P) == 0 ){
+            continue;
+        }
+        pte_t pte = uvpt[page];
+        if ((pte & PTE_P) == 0){
+            continue;
+        }
+
+        if ((result = sys_page_map(thisenv->env_id, (void*)address , envid, (void*)address , pte & PTE_SYSCALL)) < 0){
+            panic("not mapped");
+        };
+    }
+
+    duppage(envid, PGNUM((USTACKTOP - PGSIZE)));
+
+    sys_env_set_pgfault_upcall(envid,_pgfault_upcall);
+
+    if ((result = sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_W)) < 0){
+        panic("sfork : sys_page_alloc: %e", result);
+    }
+
+    // Start the child environment running
+    if ((result = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
+        panic("sfork : sys_env_set_status: %e", result);
+
+
+    return envid;
 }
