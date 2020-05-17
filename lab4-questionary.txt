@@ -70,7 +70,7 @@ from the struct itself.
 ===   which the virtual address maps. Why can the pointer e be
 ===   dereferenced both before and after the addressing switch?
 ===   (one sentence, free form)
-variable 'e' resides in kernel space (above KERNBASE), so it's mapped the same.
+all envs are located in kernel space (above KERNBASE), so it's mapped the same.
 
 === Q In Ex. 9, what happens if the user environment runs out of
 ===   space on the exception stack?
@@ -82,7 +82,7 @@ The kernel will destroy the environment that caused the fault.
 ===   another (env B). At what address is the page mapped in env A, and
 ===   at what address is it mapped in env B?
 ===   (ADDR(in env A):ADDR(in env B) (example: 0xAAAAAAAA:0xBBBBBBBB)
-
+0x00800000:0x00400000
 ====================================================================
 === Q What challenge(s) have you chosen to implement? (specify
 ===   challenge numbers separated by spaces, if more than one)
