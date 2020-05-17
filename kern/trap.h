@@ -40,5 +40,23 @@ void align_handler ();
 void mchk_handler ();
 void simderr_handler ();
 void syscall_handler ();
+void unknown_irq_handler();
+void timer_handler();
+void spurious_handler();
+void hw_handler_1();
+void hw_handler_2();
+void hw_handler_3();
+void hw_handler_4();
+void hw_handler_5();
+void hw_handler_6();
+void hw_handler_8();
+void hw_handler_9();
+void hw_handler_10();
+void hw_handler_11();
+void hw_handler_12();
+void hw_handler_13();
+void hw_handler_14();
+void hw_handler_15();
+
 
 #endif /* JOS_KERN_TRAP_H */

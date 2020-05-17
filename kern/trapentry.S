@@ -69,6 +69,23 @@ TRAPHANDLER_NOEC(simderr_handler,T_SIMDERR)        //  19	  // SIMD floating poi
 
 TRAPHANDLER_NOEC(syscall_handler,T_SYSCALL)        //  48	  // System Call
 
+TRAPHANDLER_NOEC(timer_handler,IRQ_OFFSET + IRQ_TIMER) // 0
+TRAPHANDLER_NOEC(hw_handler_1,IRQ_OFFSET + 1)
+TRAPHANDLER_NOEC(hw_handler_2,IRQ_OFFSET + 2)
+TRAPHANDLER_NOEC(hw_handler_3,IRQ_OFFSET + 3)
+TRAPHANDLER_NOEC(hw_handler_4,IRQ_OFFSET + 4)
+TRAPHANDLER_NOEC(hw_handler_5,IRQ_OFFSET + 5)
+TRAPHANDLER_NOEC(hw_handler_6,IRQ_OFFSET + 6)
+TRAPHANDLER_NOEC(spurious_handler,IRQ_OFFSET + IRQ_SPURIOUS) // 7
+TRAPHANDLER_NOEC(hw_handler_8,IRQ_OFFSET + 8)
+TRAPHANDLER_NOEC(hw_handler_9,IRQ_OFFSET + 9)
+TRAPHANDLER_NOEC(hw_handler_10,IRQ_OFFSET + 10)
+TRAPHANDLER_NOEC(hw_handler_11,IRQ_OFFSET + 11)
+TRAPHANDLER_NOEC(hw_handler_12,IRQ_OFFSET + 12)
+TRAPHANDLER_NOEC(hw_handler_13,IRQ_OFFSET + 13)
+TRAPHANDLER_NOEC(hw_handler_14,IRQ_OFFSET + 14)
+TRAPHANDLER_NOEC(hw_handler_15,IRQ_OFFSET + 15)
+
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
