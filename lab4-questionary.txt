@@ -98,3 +98,8 @@ user/dumbfork.c
 user/pingpong.c
 === Q Describe you solution.
 ===   (free form, up to 500 words, don't need to use all 500!)
+Instead of using thisenv I used the macro: #define thisenv  (&envs[ENVX(sys_getenvid())])
+In sfork we mapped all the memory areas except the user stack and the exception stack to the same addresses.
+We removed assignment to thisenv variable (because we receive it through sys_call).
+We then duplicated the stack between the child and the parent.
+We allocated exception stack for the child and enabled the child to run.
