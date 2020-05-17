@@ -203,7 +203,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
     }
 
     // page will be removed inside page_insert as a side effect
-    if ((result = page_insert(env->env_pgdir,page_info,va,perm | PTE_U)) < 0){
+    if ((result = page_insert(env->env_pgdir,page_info,va,perm | PTE_U )) < 0){
         page_free(page_info);
         return result;
     }
@@ -277,7 +277,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
         return -E_INVAL;
     }
 
-    if ((result = page_insert(env_dst->env_pgdir, page_info, dstva, perm)) < 0){
+    if ((result = page_insert(env_dst->env_pgdir, page_info, dstva, perm | PTE_U )) < 0){
         page_free(page_info);
         return result;
     }

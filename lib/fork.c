@@ -28,7 +28,7 @@ pgfault(struct UTrapframe *utf)
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
 
-	if (err != FEC_WR){
+	if (!(err & FEC_WR)){
 	    panic ("fork : pgfault : read access");
 	}
 
@@ -46,16 +46,16 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 	int result;
-	if ((result = sys_page_alloc(thisenv->env_id, (void*) PFTEMP, PTE_W )) < 0){
+	if ((result = sys_page_alloc(0, (void*) PFTEMP, PTE_W )) < 0){
 	    panic ("fork : pgfault : sys_page_alloc failed: %e", result);
 	}
 
 	// move data from addr too PFTEMP
 	void* round_address = ROUNDDOWN(addr, PGSIZE);
-	memmove(round_address, PFTEMP, PGSIZE );
+	memmove(PFTEMP, round_address, PGSIZE );
 
 	// Allocate address (TODO: delete previous content? what if more than one reference
-    if ((result = sys_page_alloc(thisenv->env_id, round_address, ( PTE_W ))) < 0){
+    if ((result = sys_page_map(0, PFTEMP, 0, round_address,  PTE_W )) < 0){
         panic ("fork pgfault: pgfault : sys_page_alloc failed: %e", result);
     }
 
@@ -108,8 +108,6 @@ duppage(envid_t envid, unsigned pn)
 	    return 0;
 	}
 
-	cprintf("\nflags 0x%x", flags);
-
     if ((result = sys_page_map(thisenv->env_id, address , thisenv->env_id, address , flags)) < 0){
         panic("fork : duppage : %e", result);
     }
@@ -140,6 +138,7 @@ fork(void)
     uint8_t *addr;
     int result;
 
+    set_pgfault_handler(pgfault);
 
     uintptr_t p = (uintptr_t) thisenv->env_pgfault_upcall;
     int x = 1;
@@ -163,7 +162,7 @@ fork(void)
 
     // We're the parent.
     unsigned page;
-    for (page = 0xeebfde64 >> 12; page < PGNUM(UTOP); page += 1){
+    for (page = 0; page < PGNUM(UTOP); page += 1){
 
         if (page == PGNUM(UXSTACKTOP - PGSIZE)){
             continue;
