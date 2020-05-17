@@ -381,7 +381,7 @@ page_fault_handler(struct Trapframe *tf)
 	    struct UTrapframe* utf = (struct UTrapframe*) utf_ptr;
 
 	    // check if the environment allocated a page for the exception stack.
-	    user_mem_assert(curenv, (void*) (UXSTACKTOP - PGSIZE), PGSIZE, PTE_W);
+	    user_mem_assert(curenv, (void*) utf, PGSIZE, PTE_W);
 
 	    utf->utf_eip = tf->tf_eip;
 	    utf->utf_esp = tf->tf_esp;
@@ -397,9 +397,9 @@ page_fault_handler(struct Trapframe *tf)
 
 	}
 
-
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
+	//mon_backtrace(0,0,0);
 	print_trapframe(tf);
 	env_destroy(curenv);
 }

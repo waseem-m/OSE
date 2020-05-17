@@ -561,7 +561,7 @@ env_run(struct Env *e)
         panic ("env_run: e = NULL. %e", -E_INVAL);
     }
 
-    bool context_switch = curenv && (curenv->env_id != e->env_id);
+    bool context_switch = curenv  && (curenv->env_status == ENV_RUNNING);
 
     if (context_switch){
         curenv->env_status = ENV_RUNNABLE;

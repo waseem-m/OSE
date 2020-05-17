@@ -89,6 +89,10 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
     int ebp = read_ebp();
 
+
+    cprintf("Curr env %08x\n", curenv ? curenv->env_id : 0);
+
+
     while (ebp != 0){
 
         int* ebp_as_array = (int*) ebp;
