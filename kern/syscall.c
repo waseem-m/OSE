@@ -368,7 +368,7 @@ sys_page_unmap(envid_t envid, void *va)
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
-	LAB 4: Your code here.
+	//LAB 4: Your code here.
     struct Env* env;
     int result;
     if ((result = envid2env(envid, &env, false)) < 0){
