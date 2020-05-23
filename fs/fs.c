@@ -64,7 +64,7 @@ alloc_block(void)
 	// LAB 5: Your code here.
 	uint32_t blockno;
 	for(blockno=1;blockno<super->s_nblocks; blockno++){
-		if (bitmap[blockno/32] & 1<<(blockno%32)){
+		if (block_is_free(blockno)){
 			bitmap[blockno/32] &= ~(1 << (blockno%32));
 			break;
 		}
@@ -74,9 +74,8 @@ alloc_block(void)
 		return -E_NO_DISK;
 	}
 
-	//TODO: write back to disk!!!!!
-
-
+	//TODO: any checks?
+	flush_block(diskaddr(blockno));
 	return blockno;
 }
 
