@@ -52,8 +52,8 @@ bc_pgfault(struct UTrapframe *utf)
 	    panic ("bc_pgfault:sys_page_alloc %e", r);
 	}
 
-	uint32_t sectorno = blockno * BLKSIZE / SECTSIZE;
-    if ((r = ide_read(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSIZE / SECTSIZE)) < 0){
+	uint32_t sectorno = blockno * BLKSECTS;
+    if ((r = ide_read(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSECTS)) < 0){
         panic ("bc_pgfault:ide_read %e", r);
     }
 
@@ -94,7 +94,8 @@ flush_block(void *addr)
         panic("flush_block: reading non-existent block %08x\n", blockno);
 
     if (!va_is_mapped(addr)){ // TODO: not sure if correct
-        panic ("flush_block:va_is_mapped error : %p", addr);
+        //panic ("flush_block:va_is_mapped error : %p", addr);
+    	return;
     }
 
     if (!va_is_dirty(addr)){
@@ -102,8 +103,8 @@ flush_block(void *addr)
         return;
     }
 
-    uint32_t sectorno = blockno * BLKSIZE / SECTSIZE;
-    if ((result = ide_write(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSIZE / SECTSIZE)) < 0){
+    uint32_t sectorno = blockno * BLKSECTS;
+    if ((result = ide_write(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSECTS)) < 0){
         panic ("flush_block:ide_read %e", result);
     }
 
