@@ -147,8 +147,45 @@ fs_init(void)
 static int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-       // LAB 5: Your code here.
-       panic("file_block_walk not implemented");
+	// LAB 5: Your code here.
+	if(f == NULL || ppdiskbno == NULL){ //TODO: need this?
+		panic("file_block_walk: pointer is NULL");
+	}
+
+	// If out of bounds, error
+	if(filebno >= NDIRECT + NINDIRECT){
+		return -E_INVAL;
+	}
+
+	// If direct, set *ppdiskbno to the direct block pointer
+	if(filebno < NDIRECT){
+		*ppdiskbno = &f->f_direct[filebno];
+		//assert(!block_is_free((uint32_t)*ppdiskbno)); //TODO: is this correct?
+		return 0;
+	}
+
+	// If indirect, set *ppdiskbno to pointer to block (walk the indirectness)
+	// 	(allocate indirect if not allocated)
+	if(filebno >= NDIRECT){
+		if(f->f_indirect==0 && !alloc){
+			return -E_NOT_FOUND;
+		}
+		if(f->f_indirect==0 && alloc){
+			int newblk = alloc_block();
+			if(newblk < 0){
+				return -E_NO_DISK;
+			}
+			memset((void*)newblk,0,BLKSIZE);
+			f->f_indirect = newblk;
+		}
+		uint32_t * indirect_blk = (uint32_t *)diskaddr(f->f_indirect);
+		*ppdiskbno = &indirect_blk[filebno-NDIRECT];
+		//assert(!block_is_free((uint32_t)*ppdiskbno)); //TODO: is this correct?
+		return 0;
+	}
+
+	// If reached here, "if" conditions don't cover everything
+	panic("file_block_walk messed up");
 }
 
 // Set *blk to the address in memory where the filebno'th
@@ -162,8 +199,32 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_get_block(struct File *f, uint32_t filebno, char **blk)
 {
-       // LAB 5: Your code here.
-       panic("file_get_block not implemented");
+
+	// LAB 5: Your code here.
+	if(f == NULL || blk == NULL){ //TODO: need this?
+		panic("file_block_walk: pointer is NULL");
+	}
+
+	// Block walk to get blockno
+	uint32_t * ppdiskbno = NULL;
+	int res = file_block_walk(f,filebno,&ppdiskbno,1);
+	if(res < 0){
+		return res;
+	}
+
+	// If pointer is zero (blockno not allocated), need to allocate block
+	if(*ppdiskbno == 0){
+		res = alloc_block();
+		if(res < 0){
+			return res;
+		}
+		*ppdiskbno = res;
+	}
+
+	// Copy address of blockno to *blk
+	*blk = (char*) diskaddr(*ppdiskbno);
+
+	return 0;
 }
 
 // Try to find a file named "name" in dir.  If so, set *file to it.
