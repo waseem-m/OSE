@@ -93,6 +93,10 @@ duppage(envid_t envid, unsigned pn)
 	pte_t flags = pte & PTE_SYSCALL;
 	bool copy_on_write = (flags & (PTE_COW | PTE_W)) != 0;
 
+	// Lab5:
+	// If shared, copy pte (pte & PTE_SYSCALL) without change
+	copy_on_write = copy_on_write && !(flags & PTE_SHARE);
+
 	// Check if need to change to copy on write
 	if (copy_on_write) {
 	    flags &= ~(pte_t) PTE_W;

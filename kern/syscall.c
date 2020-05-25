@@ -141,7 +141,35 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
+
+	struct Env* env;
+	int result;
+	if ((result = envid2env(envid, &env, true)) < 0){
+		return result;
+	}
+	if (!env){
+		return -E_BAD_ENV;
+	}
+
+	if ((result = user_mem_check(env, tf, sizeof(struct Trapframe), PTE_U)) < 0) {
+		return result;
+	}
+
+
+	// TODO: Make sure that protection level is 3 (CPL 3)
+	// HOW? Been looking in intel manual..
+	//tf->tf_cs = ??;
+	//tf->tf_ds?
+	//tf->tf_es?
+	//tf->tf_ss?
+
+	// Make sure that interrupts are enabled
+	tf->tf_eflags |= FL_IF;
+
+	//Update env's trap frame
+	env->env_tf = *tf;
+
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -495,6 +523,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
         case SYS_env_set_status:
             return sys_env_set_status(a1,a2);
+
+        case SYS_env_set_trapframe:
+        	return sys_env_set_trapframe(a1,(struct Trapframe *) a2);
 
         case SYS_env_set_pgfault_upcall:
             return sys_env_set_pgfault_upcall(a1, (void*) a2);

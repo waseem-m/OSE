@@ -301,6 +301,34 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	int res = 0;
+
+	unsigned page;
+
+	// Iterate over user space
+	for (page = 0; page < PGNUM(UTOP); page += 1){
+		if (page == PGNUM(UXSTACKTOP - PGSIZE)){
+			continue;
+		}
+
+		pde_t pde = uvpd[page >> 10];
+		if ((pde & PTE_P) == 0 ){
+			continue;
+		}
+		pte_t pte = uvpt[page];
+		if ((pte & PTE_P) == 0){
+			continue;
+		}
+
+		// If entry is shared, duplicate it to child's address
+		if(pte & PTE_SHARE){
+			if ((res = sys_page_map(0, (void *)(page * PGSIZE), child,
+					(void *)(page * PGSIZE), pte & PTE_SYSCALL)) < 0) {
+				return res;
+			}
+		}
+	}
+
 	return 0;
 }
 
