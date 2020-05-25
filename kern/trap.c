@@ -99,10 +99,10 @@ trap_init(void)
 	SETGATE(idt[T_SYSCALL], 0, GD_KT,syscall_handler, 3);
 	
 	SETGATE(idt[IRQ_OFFSET + IRQ_TIMER], 0, GD_KT, timer_handler, 0);
-	SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, hw_handler_1, 0);
+	SETGATE(idt[IRQ_OFFSET + IRQ_KBD], 0, GD_KT, kbd_handler, 0);
 	SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, hw_handler_2, 0);
 	SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, hw_handler_3, 0);
-	SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, hw_handler_4, 0);
+	SETGATE(idt[IRQ_OFFSET + IRQ_SERIAL], 0, GD_KT, serial_handler, 0);
 	SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, hw_handler_5, 0);
 	SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, hw_handler_6, 0);
 	SETGATE(idt[IRQ_OFFSET + IRQ_SPURIOUS], 0, GD_KT, spurious_handler, 0);
@@ -264,6 +264,17 @@ trap_dispatch(struct Trapframe *tf)
 
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD) {
+        lapic_eoi();
+        kbd_intr();
+        return;
+	}
+
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL) {
+        lapic_eoi();
+        kbd_intr();
+        return;
+    }
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);

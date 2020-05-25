@@ -151,20 +151,22 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 		return -E_BAD_ENV;
 	}
 
-	if ((result = user_mem_check(env, tf, sizeof(struct Trapframe), PTE_U)) < 0) {
+	// TODO: correct to add PTE_W ?
+	if ((result = user_mem_check(env, tf, sizeof(struct Trapframe), PTE_U | PTE_W)) < 0) {
 		return result;
 	}
 
+	//  Make sure that protection level is 3 (CPL 3)
+    tf->tf_ds = GD_UD | 3;
+    tf->tf_es = GD_UD | 3;
+    tf->tf_ss = GD_UD | 3;
+    tf->tf_cs = GD_UT | 3;
 
-	// TODO: Make sure that protection level is 3 (CPL 3)
-	// HOW? Been looking in intel manual..
-	//tf->tf_cs = ??;
-	//tf->tf_ds?
-	//tf->tf_es?
-	//tf->tf_ss?
-
-	// Make sure that interrupts are enabled
+    // Make sure that interrupts are enabled
 	tf->tf_eflags |= FL_IF;
+
+	// Disable IO privilege
+	tf->tf_eflags &= ~FL_IOPL_MASK;
 
 	//Update env's trap frame
 	env->env_tf = *tf;
