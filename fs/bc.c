@@ -108,9 +108,9 @@ flush_block(void *addr)
         panic ("flush_block:ide_read %e", result);
     }
 
-    // TODO: sys_page_map already align addr to page size. should we change it anyway?
-    if ((result = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
-        panic("flush_block:sys_page_map: %e", result);
+    void* alligned_addr = ROUNDDOWN(addr, PGSIZE);
+    if ((result = sys_page_map(0, alligned_addr, 0, alligned_addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
+        panic("flush_block:sys_page_map: %e addr %p", result, addr);
 }
 
 // Test that the block cache works, by smashing the superblock and

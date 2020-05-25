@@ -435,7 +435,7 @@ sys_ipc_recv(void *dstva)
 	// LAB 4: Your code here.
     if ((uintptr_t) dstva < UTOP){
 
-        if ((uintptr_t) dstva & PGSIZE){
+        if ((uintptr_t) dstva % PGSIZE){
             return -E_INVAL;
         }
 

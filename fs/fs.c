@@ -175,7 +175,7 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 			if(newblk < 0){
 				return -E_NO_DISK;
 			}
-			memset((void*)newblk,0,BLKSIZE);
+			memset(diskaddr(newblk) ,0,BLKSIZE);
 			f->f_indirect = newblk;
 		}
 		uint32_t * indirect_blk = (uint32_t *)diskaddr(f->f_indirect);
