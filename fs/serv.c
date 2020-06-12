@@ -214,7 +214,24 @@ serve_read(envid_t envid, union Fsipc *ipc)
 		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// Lab 5: Your code here:
-	return 0;
+	int result;
+	struct OpenFile* openFile;
+	if ((result = openfile_lookup(envid, req->req_fileid, &openFile)) < 0){
+	    return result;
+	}
+	struct Fd * fd = openFile->o_fd;
+
+	if ((fd->fd_omode & O_ACCMODE) == O_WRONLY){
+	    return -E_NOT_SUPP;
+	}
+
+	if ((result = file_read(openFile->o_file,ret->ret_buf,req->req_n,fd->fd_offset)) < 0){
+	    return result;
+	}
+
+	fd->fd_offset += result;
+
+	return result;
 }
 
 
@@ -229,7 +246,24 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// LAB 5: Your code here.
-	panic("serve_write not implemented");
+    int result;
+    struct OpenFile* openFile;
+    if ((result = openfile_lookup(envid, req->req_fileid, &openFile)) < 0){
+        return result;
+    }
+    struct Fd * fd = openFile->o_fd;
+
+    if ((fd->fd_omode & O_ACCMODE) == O_RDONLY){
+        return -E_NOT_SUPP;
+    }
+
+    if ((result = file_write(openFile->o_file,req->req_buf,req->req_n,fd->fd_offset)) < 0){
+        return result;
+    }
+
+    fd->fd_offset += result;
+
+    return result;
 }
 
 // Stat ipc->stat.req_fileid.  Return the file's struct Stat to the

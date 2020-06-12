@@ -48,9 +48,18 @@ bc_pgfault(struct UTrapframe *utf)
 	// the disk.
 	//
 	// LAB 5: you code here:
+	if ((r = sys_page_alloc(thisenv->env_id,ROUNDDOWN(addr, PGSIZE),PTE_W)) < 0){
+	    panic ("bc_pgfault:sys_page_alloc %e", r);
+	}
+
+	uint32_t sectorno = blockno * BLKSECTS;
+    if ((r = ide_read(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSECTS)) < 0){
+        panic ("bc_pgfault:ide_read %e", r);
+    }
 
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
+    // TODO: sys_page_map already align addr to page size. should we change it anyway?
 	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
 		panic("in bc_pgfault, sys_page_map: %e", r);
 
@@ -71,13 +80,37 @@ bc_pgfault(struct UTrapframe *utf)
 void
 flush_block(void *addr)
 {
+    int result = 0;
+
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
 
 	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+
+    // Sanity check the block number.
+    if (super && blockno >= super->s_nblocks)
+        panic("flush_block: reading non-existent block %08x\n", blockno);
+
+    if (!va_is_mapped(addr)){ // TODO: not sure if correct
+        //panic ("flush_block:va_is_mapped error : %p", addr);
+    	return;
+    }
+
+    if (!va_is_dirty(addr)){
+        // no need to flush
+        return;
+    }
+
+    uint32_t sectorno = blockno * BLKSECTS;
+    if ((result = ide_write(sectorno, ROUNDDOWN(addr, PGSIZE),BLKSECTS)) < 0){
+        panic ("flush_block:ide_read %e", result);
+    }
+
+    void* alligned_addr = ROUNDDOWN(addr, PGSIZE);
+    if ((result = sys_page_map(0, alligned_addr, 0, alligned_addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
+        panic("flush_block:sys_page_map: %e addr %p", result, addr);
 }
 
 // Test that the block cache works, by smashing the superblock and

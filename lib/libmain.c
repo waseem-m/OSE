@@ -2,18 +2,21 @@
 // entry.S already took care of defining envs, pages, uvpd, and uvpt.
 
 #include <inc/lib.h>
-
-extern void umain(int argc, char **argv);
+#include <inc/env.h>
 
 const volatile struct Env *thisenv;
+extern void umain(int argc, char **argv);
+
 const char *binaryname = "<unknown>";
 
 void
 libmain(int argc, char **argv)
 {
-	// set thisenv to point at our Env structure in envs[].
-	// LAB 3: Your code here.
-	thisenv = 0;
+
+    // set thisenv to point at our Env structure in envs[].
+    // LAB 3: Your code here.
+    envid_t eid = sys_getenvid();
+    thisenv = envs + ENVX(eid);
 
 	// save the name of the program so that panic() can use it
 	if (argc > 0)
