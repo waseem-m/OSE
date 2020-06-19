@@ -6,7 +6,10 @@
 
 // LAB 6: Your driver code here
 
-volatile uint32_t  *base_address;
+#define TX_DESC_NUM 64
+
+static volatile uint32_t  *base_address;
+static struct e1000_tx_desc* tx_descriptors;
 
 #define REG(id) ((uint32_t*) (base_address + (id / 4)))
 
@@ -26,6 +29,46 @@ int attach_e1000(struct pci_func *e1000){
     *REG(E1000_TIPG) = 0;
     *REG(E1000_TIPG) = 10 << 0; // IPGT [9:0]
 
+    struct PageInfo *p = NULL;
+    if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
+        return -E_NO_MEM;
+    }
+
+    // Transmit descriptors
+    tx_descriptors = page2kva(p);
+    *REG(E1000_TDBAL) = page2pa(p);
+    *REG(E1000_TDLEN) = TX_DESC_NUM * sizeof (struct e1000_tx_desc);
+    if (*REG(E1000_TDLEN) % 128){
+        panic("E1000_TDLEN unvalid valude %d", *REG(E1000_TDLEN));
+    }
+    *REG(E1000_TDH) = 0;
+    *REG(E1000_TDT) = 0;
+
+    for (int i = 0; i < TX_DESC_NUM; i++){
+        if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
+            return -E_NO_MEM;
+        }
+        tx_descriptors[i].buffer_addr = page2pa(p);
+        tx_descriptors[i].lower.data |= E1000_TXD_CMD_RS;
+        tx_descriptors[i].upper.data |= E1000_TXD_STAT_DD;
+    }
+
     return 0;
 }
 
+int transmit(void* buffer, uint32_t size){
+
+    uint32_t tx_tail = *REG(E1000_TDT);
+
+    uint32_t last = tx_tail - 1 > tx_tail ? TX_DESC_NUM - 1 : 0;
+    if (!(tx_descriptors[tx_tail].upper.data & E1000_TXD_STAT_DD)){
+        return -E_E1000_TX_FULL;
+    }
+
+    tx_descriptors[tx_tail].buffer_addr = buffer;
+    tx_descriptors[tx_tail].lower.flags.length = size;
+    tx_descriptors[tx_tail].upper.data =& ~E1000_TXD_STAT_DD;
+
+    *REG(E1000_TDT) = (++tx_tail) % TX_DESC_NUM;
+    return 0;
+}

@@ -25,6 +25,8 @@ enum {
 	E_FILE_EXISTS	,	// File already exists
 	E_NOT_EXEC	,	// File not a valid executable
 	E_NOT_SUPP	,	// Operation not supported
+	E_E1000_TX_FULL, // "e1000 tx full",
+	E_E1000_RX_EMPTY, // "e1000 rx empty",
 
 	MAXERROR
 };

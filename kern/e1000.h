@@ -638,6 +638,21 @@ int attach_e1000(struct pci_func *e1000);
 #define E1000_EEPROM_CFG_DONE_PORT_1  0x00080000   /* ...for second port */
 
 /* Transmit Descriptor */
+struct tx_desc
+{
+        uint64_t addr;
+        union {
+            struct {
+                uint16_t length;
+                uint8_t cso;
+                uint8_t cmd;
+                uint8_t status;
+                uint8_t css;
+                uint16_t special;
+            } fields;
+        } ;
+};
+
 struct e1000_tx_desc {
     uint64_t buffer_addr;       /* Address of the descriptor's data buffer */
     union {
