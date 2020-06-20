@@ -1,8 +1,10 @@
 #ifndef JOS_KERN_E1000_H
 #define JOS_KERN_E1000_H
 
+#include <kern/pci.h>
+
 int e1000_attach(struct pci_func *e1000);
-int e1000_tx_pkg(void* buffer, uint32_t size);
+int e1000_tx_pkg(void* buffer, uint32_t size, bool last);
 
 /* PCI Device IDs */
 #define E1000_DEV_ID_82542               0x1000

@@ -31,7 +31,7 @@ umain(int argc, char **argv)
 		pkt->jp_len = snprintf(pkt->jp_data,
 				       PGSIZE - sizeof(pkt->jp_len),
 				       "Packet %02d", i);
-		cprintf("Transmitting packet %d\n", i);
+		cprintf("\nTransmitting packet %d\n", i);
 		ipc_send(output_envid, NSREQ_OUTPUT, pkt, PTE_P|PTE_W|PTE_U);
 		sys_page_unmap(0, pkt);
 	}
@@ -39,4 +39,5 @@ umain(int argc, char **argv)
 	// Spin for a while, just in case IPC's or packets need to be flushed
 	for (i = 0; i < TESTOUTPUT_COUNT*2; i++)
 		sys_yield();
+
 }

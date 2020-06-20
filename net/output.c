@@ -1,4 +1,4 @@
-#include "ns.h"
+#include <inc/lib.h>
 
 extern union Nsipc nsipcbuf;
 
@@ -26,7 +26,7 @@ output(envid_t ns_envid)
             error = true;
         }
 
-        if (perm & (PTE_P|PTE_W|PTE_U) != (PTE_P|PTE_W|PTE_U)){
+        if ((perm & (PTE_P|PTE_W|PTE_U)) != (PTE_P|PTE_W|PTE_U)){
             cprintf("net output ipc_recv incorrect perm: 0x%x", perm);
             error = true;
         }
@@ -35,9 +35,10 @@ output(envid_t ns_envid)
             continue;
         }
 
-        char* data = nsipcbuf->pkt.jp_data;
-        uint32_t len = nsipcbuf->pkt.jp_len;
+        char* data = nsipcbuf.pkt.jp_data;
+        uint32_t len = nsipcbuf.pkt.jp_len;
 
+        cprintf("\n=========OUTPUT envid %x %p len %d",thisenv->env_id, data, len );
         while (true){
             if ((result = sys_tx_pkg(data, len, LAST_PKG)) < 0){
                 if (result == -E_E1000_TX_FULL){
@@ -46,6 +47,8 @@ output(envid_t ns_envid)
                 }
                 panic ("\nnet output sys_tx_pkg %e", result);
             }
+            break;
         }
+        cprintf("\n=========OUTPUT envid %x finished",thisenv->env_id);
 	}
 }

@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -494,8 +495,8 @@ sys_time_msec(void)
 }
 
 static int
-sys_tx_pkg(void* buffer, uint32_t size){
-    return e1000_tx_pkg(buffer, size);
+sys_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
+    return e1000_tx_pkg(buffer, size, true);
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -556,7 +557,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
             return sys_time_msec();
 
         case SYS_tx_pkg:
-            return sys_tx_pkg();
+            return sys_tx_pkg((void*) a1, a2, a3);
 
         default:
             return -E_INVAL;

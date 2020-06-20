@@ -1,6 +1,7 @@
 // Basic string routines.  Not hardware optimized, but not shabby.
 
 #include <inc/string.h>
+#include <inc/stdio.h>
 
 // Using assembly for memset/memmove
 // makes some difference on real hardware,
@@ -208,6 +209,7 @@ memmove(void *dst, const void *src, size_t n)
 void *
 memcpy(void *dst, const void *src, size_t n)
 {
+    cprintf("\n memcpy dst %p src %p\n", dst, src);
 	return memmove(dst, src, n);
 }
 
