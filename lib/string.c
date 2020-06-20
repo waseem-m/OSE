@@ -209,7 +209,7 @@ memmove(void *dst, const void *src, size_t n)
 void *
 memcpy(void *dst, const void *src, size_t n)
 {
-    cprintf("\n memcpy dst %p src %p\n", dst, src);
+    //cprintf("\n memcpy dst %p src %p\n", dst, src);
 	return memmove(dst, src, n);
 }
 

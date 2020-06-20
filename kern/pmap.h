@@ -47,19 +47,6 @@ _kaddr(const char *file, int line, physaddr_t pa)
 	return (void *)(pa + KERNBASE);
 }
 
-#define KADDR1(pa) _kaddr1(__FILE__, __LINE__, pa)
-
-static inline void*
-_kaddr1(const char *file, int line, physaddr_t pa)
-{
-    if (PGNUM(pa) >= npages)
-        _panic(file, line, "KADDR called with invalid pa %08lx", pa);
-    void* result = (void *)(pa + KERNBASE);
-    cprintf("[ KADDR1 %p]", result);
-    return (void *)(pa + KERNBASE);
-}
-
-
 enum {
 	// For page_alloc, zero the returned physical page.
 	ALLOC_ZERO = 1<<0,

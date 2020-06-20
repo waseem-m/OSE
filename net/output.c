@@ -38,7 +38,7 @@ output(envid_t ns_envid)
         char* data = nsipcbuf.pkt.jp_data;
         uint32_t len = nsipcbuf.pkt.jp_len;
 
-        cprintf("\n=========OUTPUT envid %x %p len %d",thisenv->env_id, data, len );
+        //cprintf("\n=========OUTPUT envid %x %p len %d",thisenv->env_id, data, len );
         while (true){
             if ((result = sys_tx_pkg(data, len, LAST_PKG)) < 0){
                 if (result == -E_E1000_TX_FULL){
@@ -49,6 +49,6 @@ output(envid_t ns_envid)
             }
             break;
         }
-        cprintf("\n=========OUTPUT envid %x finished",thisenv->env_id);
+        //cprintf("\n=========OUTPUT envid %x finished",thisenv->env_id);
 	}
 }

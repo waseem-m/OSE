@@ -21,7 +21,7 @@ int e1000_attach(struct pci_func *e1000){
     pci_func_enable(e1000);
     base_address = mmio_map_region(e1000->reg_base[0],e1000->reg_size[0]);
 
-    cprintf("E1000 Status: 0x%x\n",*REG(E1000_STATUS));
+    //cprintf("E1000 Status: 0x%x\n",*REG(E1000_STATUS));
 
     struct PageInfo *p = NULL;
     if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
@@ -42,7 +42,7 @@ int e1000_attach(struct pci_func *e1000){
         if ((p = page_alloc(ALLOC_ZERO)) == 0 ){ // TODO: clean memory on error
             return -E_NO_MEM;
         }
-        cprintf("\nE1000 buffer %d pa %x va %x \n",i, page2pa(p), page2kva(p) );
+        //cprintf("\nE1000 buffer %d pa %x va %x \n",i, page2pa(p), page2kva(p) );
         tx_descriptors[i].buffer_addr = page2pa(p);
         tx_descriptors[i].lower.data |= E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
         tx_descriptors[i].upper.data |= E1000_TXD_STAT_DD;
@@ -68,7 +68,7 @@ int e1000_attach(struct pci_func *e1000){
 int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
 
 
-    //cprintf("\n====e1000_tx_pkg START envid %x buffer %p size %d last_pkg %d\n", curenv->env_id, buffer, size, last_pkg);
+    ////cprintf("\n====e1000_tx_pkg START envid %x buffer %p size %d last_pkg %d\n", curenv->env_id, buffer, size, last_pkg);
 
     int result;
     user_mem_assert(curenv, buffer, size, PTE_U);
@@ -79,10 +79,10 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
     }
 
     uint32_t i;
-    //cprintf("\ne1000_tx_pkg Data:");
+    ////cprintf("\ne1000_tx_pkg Data:");
     char* buf = buffer;
     for (i = 0 ; i < size ; i += 4){
-        //cprintf("\n%x", *(uint32_t*)&buf[i]);
+        ////cprintf("\n%x", *(uint32_t*)&buf[i]);
     }
 
     uint32_t tx_tail = *REG(E1000_TDT);
@@ -93,21 +93,21 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
         return -E_E1000_TX_FULL;
     }
 
-    volatile void * rr = KADDR1(tx_descriptors[tx_tail].buffer_addr);
-    //cprintf("\n DEBUG2 KADDR1 %p", rr);
-    //cprintf("\n====e1000_tx_pkg D1 va %p pa %p \n", rr, tx_descriptors[tx_tail].buffer_addr);
-    memcpy(KADDR1(tx_descriptors[tx_tail].buffer_addr), (void*) buffer, size);
+    //volatile void * rr = KADDR1(tx_descriptors[tx_tail].buffer_addr);
+    ////cprintf("\n DEBUG2 KADDR1 %p", rr);
+    ////cprintf("\n====e1000_tx_pkg D1 va %p pa %p \n", rr, tx_descriptors[tx_tail].buffer_addr);
+    memcpy(KADDR(tx_descriptors[tx_tail].buffer_addr), (void*) buffer, size);
     tx_descriptors[tx_tail].lower.flags.length = size;
     tx_descriptors[tx_tail].lower.data |= E1000_TXD_CMD_EOP;
     tx_descriptors[tx_tail].upper.data &= ~E1000_TXD_STAT_DD;
 
     char* sss = KADDR(tx_descriptors[tx_tail].buffer_addr);
-    //cprintf("\nDebug_3");
+    ////cprintf("\nDebug_3");
     for (i = 0 ; i < size ; i += 4){
-        //cprintf("\n%x", *(uint32_t*)&sss[i]);
+        ////cprintf("\n%x", *(uint32_t*)&sss[i]);
     }
 
     *REG(E1000_TDT) = (++tx_tail) % TX_DESC_NUM;
-    //cprintf("\n====e1000_tx_pkg FINISHED envid %x \n", curenv->env_id);
+    ////cprintf("\n====e1000_tx_pkg FINISHED envid %x \n", curenv->env_id);
     return 0;
 }
