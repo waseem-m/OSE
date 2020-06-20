@@ -10,18 +10,30 @@
 // LAB 6: Your driver code here
 
 #define TX_DESC_NUM 64
+#define RX_DESC_NUM 128
 
 static volatile uint32_t  *base_address;
 static struct e1000_tx_desc* tx_descriptors;
+static struct e1000_rx_desc* rx_descriptors;
+
 
 #define REG(id) ((uint32_t*) (base_address + (id / 4)))
 
 int e1000_attach(struct pci_func *e1000){
 
+    ////////////////////////////////////////////
+    // PCI configuration
+    ///////////////////////////////////////////
+
     pci_func_enable(e1000);
     base_address = mmio_map_region(e1000->reg_base[0],e1000->reg_size[0]);
 
     //cprintf("E1000 Status: 0x%x\n",*REG(E1000_STATUS));
+
+    ////////////////////////////////////////////
+    // Receive descriptors
+    ///////////////////////////////////////////
+
 
     struct PageInfo *p = NULL;
     if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
@@ -48,6 +60,9 @@ int e1000_attach(struct pci_func *e1000){
         tx_descriptors[i].upper.data |= E1000_TXD_STAT_DD;
     }
 
+    *REG(E1000_RDH) = 1;
+    *REG(E1000_RDT) = 0;
+
     *REG(E1000_TIPG) = 0;
     *REG(E1000_TIPG) = 10 << 0; // IPGT [9:0]
 
@@ -60,7 +75,49 @@ int e1000_attach(struct pci_func *e1000){
     *REG(E1000_TCTL) |= 0x40 << 12; // E1000_TCTL_COLD   0x003ff000
     *REG(E1000_TCTL) |= E1000_TCTL_EN;
 
+    ////////////////////////////////////////////
+    // Receive descriptors
+    ///////////////////////////////////////////
 
+    if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
+        return -E_NO_MEM;
+    }
+
+    rx_descriptors = page2kva(p);
+
+    // Section 14.4
+    *(uint64_t*) REG(E1000_RA) = 0x0000563412005452ull;
+    *REG(E1000_RAH) |= E1000_RAH_AV;
+
+    cprintf("\n RAL 0x%x", *REG(E1000_RAL));
+    cprintf("\n RAH 0x%x", *REG(E1000_RAH));
+
+
+    *REG(E1000_MTA) = 0; //initalize MTA to 0
+
+    *REG(E1000_RDBAL) = page2pa(p);
+    *REG(E1000_RDBAH) = 0;
+    *REG(E1000_RDLEN) = RX_DESC_NUM * sizeof (struct e1000_rx_desc);
+
+    // Set Rx buffers
+    for (i = 0; i < RX_DESC_NUM; i++){
+        if ((p = page_alloc(ALLOC_ZERO)) == 0 ){ // TODO: clean memory on error
+            return -E_NO_MEM;
+        }
+        rx_descriptors[i].buffer_addr = page2pa(p);
+        rx_descriptors[i].status &= ~E1000_RXD_STAT_DD;
+    }
+
+    // Control
+    *REG(E1000_RCTL) &= ~E1000_RCTL_BSEX; // Use pkg in range up to 2048
+    *REG(E1000_RCTL) &= ~E1000_RCTL_SZ_256; // This will set pkg sizes to 2048 (bits [16:17] == 0
+    *REG(E1000_RCTL) &= ~E1000_RCTL_LPE; // Don't use jambo packages
+    *REG(E1000_RCTL) &= ~(0b11 << 6); // use E1000_RCTL_LBM_NO [6:7]
+    *REG(E1000_RCTL) &= ~(E1000_RCTL_MPE); // Disable multi case
+    *REG(E1000_RCTL) |= E1000_RCTL_SECRC; // Strip crc
+
+    // Enable Rx
+    *REG(E1000_RCTL) |= E1000_RCTL_EN; // Enable rx;
 
     return 0;
 }
@@ -109,5 +166,26 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
 
     *REG(E1000_TDT) = (++tx_tail) % TX_DESC_NUM;
     ////cprintf("\n====e1000_tx_pkg FINISHED envid %x \n", curenv->env_id);
+
     return 0;
+}
+
+int e1000_rx_pkg(void* buffer, uint32_t size){
+
+    uint32_t index = (*REG(E1000_RDT) + 1) % RX_DESC_NUM;
+    struct e1000_rx_desc* desc = &rx_descriptors[index];
+    if (!(desc->status & E1000_RXD_STAT_DD)){
+        return -E_E1000_RX_EMPTY;
+    }
+
+    if (size < desc->length){
+        size = desc->length;
+    }
+
+    memcpy(KADDR(desc->buffer_addr), (void*) buffer, size);
+    desc->status &= ~E1000_RXD_STAT_DD;
+    *REG(E1000_RDT) = index;
+
+    return size;
+
 }

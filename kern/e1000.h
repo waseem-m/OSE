@@ -251,6 +251,8 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last);
 #define E1000_RFCTL    0x05008  /* Receive Filter Control*/
 #define E1000_MTA      0x05200  /* Multicast Table Array - RW Array */
 #define E1000_RA       0x05400  /* Receive Address - RW Array */
+#define E1000_RAL      0x05400  /* Receive Address - Low */
+#define E1000_RAH      0x05404  /* Receive Address - High */
 #define E1000_VFTA     0x05600  /* VLAN Filter Table Array - RW Array */
 #define E1000_WUC      0x05800  /* Wakeup Control - RW */
 #define E1000_WUFC     0x05808  /* Wakeup Filter Control - RW */
