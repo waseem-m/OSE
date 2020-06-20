@@ -1,6 +1,7 @@
 #include <kern/pci.h>
 #include <kern/e1000.h>
 #include <kern/pmap.h>
+#include <inc/ns.h>
 
 // 82540EM
 
@@ -13,7 +14,7 @@ static struct e1000_tx_desc* tx_descriptors;
 
 #define REG(id) ((uint32_t*) (base_address + (id / 4)))
 
-int attach_e1000(struct pci_func *e1000){
+int e1000_attach(struct pci_func *e1000){
 
     pci_func_enable(e1000);
     base_address = mmio_map_region(e1000->reg_base[0],e1000->reg_size[0]);
@@ -56,7 +57,16 @@ int attach_e1000(struct pci_func *e1000){
     return 0;
 }
 
-int transmit(void* buffer, uint32_t size){
+int e1000_tx_pkg(void* buffer, uint32_t size){
+
+    int result;
+    if ((result = user_mem_check(thisenv,buffer,size,PTE_U)) < 1){
+        return result;
+    }
+
+    if (size > MAX_PKG_SIZE){
+        return -E_INVAL;
+    }
 
     uint32_t tx_tail = *REG(E1000_TDT);
 
@@ -66,8 +76,9 @@ int transmit(void* buffer, uint32_t size){
     }
 
     tx_descriptors[tx_tail].buffer_addr = buffer;
+    memcpy(tx_descriptors[tx_tail].buffer_addr, buffer, size);
     tx_descriptors[tx_tail].lower.flags.length = size;
-    tx_descriptors[tx_tail].upper.data =& ~E1000_TXD_STAT_DD;
+    tx_descriptors[tx_tail].upper.data =& ~ E1000_TXD_STAT_DD;
 
     *REG(E1000_TDT) = (++tx_tail) % TX_DESC_NUM;
     return 0;

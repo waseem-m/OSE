@@ -493,6 +493,11 @@ sys_time_msec(void)
     return time_msec();
 }
 
+static int
+sys_tx_pkg(void* buffer, uint32_t size){
+    return e1000_tx_pkg(buffer, size);
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -549,6 +554,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
         case SYS_time_msec:
             return sys_time_msec();
+
+        case SYS_tx_pkg:
+            return sys_tx_pkg();
 
         default:
             return -E_INVAL;

@@ -7,6 +7,8 @@
 #include <inc/mmu.h>
 #include <lwip/sockets.h>
 
+#define MAX_PKG_SIZE 1518
+
 struct jif_pkt {
 	int jp_len;
 	char jp_data[0];
