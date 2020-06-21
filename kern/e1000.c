@@ -4,6 +4,7 @@
 #include <kern/pmap.h>
 #include <kern/e1000.h>
 #include <kern/env.h>
+#include <kern/picirq.h>
 
 // 82540EM
 
@@ -16,8 +17,16 @@ static volatile uint32_t  *base_address;
 static struct e1000_tx_desc* tx_descriptors;
 static struct e1000_rx_desc* rx_descriptors;
 
+static int irq = -1;
 
 #define REG(id) ((uint32_t*) (base_address + (id / 4)))
+
+int e1000_get_irq(){
+    if (irq == -1){
+        panic("E1000 IRQ was not set");
+    }
+    return irq;
+}
 
 int e1000_attach(struct pci_func *e1000){
 
@@ -28,12 +37,17 @@ int e1000_attach(struct pci_func *e1000){
     pci_func_enable(e1000);
     base_address = mmio_map_region(e1000->reg_base[0],e1000->reg_size[0]);
 
-    //cprintf("E1000 Status: 0x%x\n",*REG(E1000_STATUS));
+    // Interrupt activation
+    irq = e1000->irq_line;
+    irq_setmask_8259A(irq_mask_8259A & ~(1<<irq));
+    *REG(E1000_IMS) = E1000_IMS_TXQE | E1000_IMS_RXSEQ | E1000_IMS_RXO | E1000_IMS_RXT0;
+    *REG(E1000_ICS) = E1000_ICS_TXQE | E1000_ICS_RXSEQ | E1000_ICS_RXO | E1000_ICS_RXT0;
+
+    cprintf("\nE1000 Status: 0x%x IRQ: %d\n",*REG(E1000_STATUS), irq);
 
     ////////////////////////////////////////////
     // Receive descriptors
     ///////////////////////////////////////////
-
 
     struct PageInfo *p = NULL;
     if ((p = page_alloc(ALLOC_ZERO)) == 0 ){

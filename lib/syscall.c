@@ -125,6 +125,10 @@ sys_time_msec(void)
 
 int
 sys_tx_pkg(void* buffer, uint32_t size, bool last){
-    //cprintf("\n=========sys_tx_pkg va %x", buffer);
     return syscall(SYS_tx_pkg, 0, (uint32_t) buffer, size, last, 0, 0);
+}
+
+int
+sys_rx_pkg(void* buffer, uint32_t size){
+    return syscall(SYS_rx_pkg, 0, (uint32_t) buffer, size, 0, 0, 0);
 }
