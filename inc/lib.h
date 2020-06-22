@@ -65,6 +65,7 @@ unsigned int sys_time_msec(void);
 #define LAST_PKG true
 int sys_tx_pkg(void* buffer, uint32_t size, bool last);
 int sys_rx_pkg(void* buffer, uint32_t size);
+int sys_set_service();
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))

@@ -504,6 +504,12 @@ sys_rx_pkg(void* buffer, uint32_t size){
     return e1000_rx_pkg(buffer, size);
 }
 
+static int
+sys_set_service(){
+    curenv->env_type = ENV_TYPE_SERVICE;
+    return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -566,6 +572,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
         case SYS_rx_pkg:
             return sys_rx_pkg((void*) a1, a2);
+
+        case SYS_set_service:
+            return sys_set_service();
 
         default:
             return -E_INVAL;

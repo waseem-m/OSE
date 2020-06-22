@@ -20,6 +20,7 @@ enum {
 	SYS_time_msec,
 	SYS_tx_pkg,
 	SYS_rx_pkg,
+	SYS_set_service,
 	NSYSCALLS
 };
 

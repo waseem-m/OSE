@@ -11,6 +11,8 @@ output(envid_t ns_envid)
 	// 	- read a packet from the network server
 	//	- send the packet to the device driver
 
+	sys_set_service();
+
 	while (true){
 
 	    int result;

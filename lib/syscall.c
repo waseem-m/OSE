@@ -132,3 +132,8 @@ int
 sys_rx_pkg(void* buffer, uint32_t size){
     return syscall(SYS_rx_pkg, 0, (uint32_t) buffer, size, 0, 0, 0);
 }
+
+int
+sys_set_service(){
+    return syscall(SYS_set_service, 0, 0, 0, 0, 0, 0);
+}
