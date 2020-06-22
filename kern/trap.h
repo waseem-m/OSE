@@ -52,7 +52,7 @@ void hw_handler_6();
 void hw_handler_8();
 void hw_handler_9();
 void hw_handler_10();
-void hw_handler_11();
+void e1000_handler();
 void hw_handler_12();
 void hw_handler_13();
 void hw_handler_14();

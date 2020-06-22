@@ -24,16 +24,31 @@ input(envid_t ns_envid)
 	        panic ("INPUT error %e", result);
 	    }
 
-	    result = sys_rx_pkg((void*) nsipcbuf.pkt.jp_data, nsipcbuf.pkt.jp_len);
+	    result = sys_rx_pkg((void*) nsipcbuf.pkt.jp_data, MAX_PKG_SIZE);
 
 	    if (result < 0){
 	        cprintf ("\nINPUT: ipc_recv failed on %e. Ignoring", result);
 	        continue;
 	    }
 
-	    int length = result;
+	    if (result == 0){
+	        continue;
+	    }
 
-	    ipc_send(ns_envid, NSREQ_INPUT, &nsipcbuf, PTE_W | PTE_U);
+	    int length = result;
+	    nsipcbuf.pkt.jp_len = result;
+
+#if 0
+	    int i;
+	    cprintf("\n::USER Start length %d\n", result);
+	    uint32_t* ptr = (uint32_t*) nsipcbuf.pkt.jp_data;
+	    for (i = 0; i < result / 4; i++){
+	        cprintf("0x%08x ", ptr[i]);
+	    }
+	    cprintf("\n::USER end\n");
+#endif
+
+	    ipc_send(ns_envid, NSREQ_INPUT, &nsipcbuf, PTE_W | PTE_U | PTE_P);
 
 	    // Make sure receiving env will have access event even after getting a new package
 	    sys_page_unmap(0, &nsipcbuf);

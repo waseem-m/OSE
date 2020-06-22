@@ -2,9 +2,10 @@
 #include <inc/ns.h>
 #include <kern/env.h>
 #include <kern/pmap.h>
-#include <kern/e1000.h>
 #include <kern/env.h>
 #include <kern/picirq.h>
+#include <kern/e1000.h>
+#include <kern/sched.h>
 
 // 82540EM
 
@@ -18,6 +19,9 @@ static struct e1000_tx_desc* tx_descriptors;
 static struct e1000_rx_desc* rx_descriptors;
 
 static int irq = -1;
+
+static struct Env* env_wait_receive = NULL;
+static struct Env* env_wait_send = NULL;
 
 #define REG(id) ((uint32_t*) (base_address + (id / 4)))
 
@@ -74,10 +78,6 @@ int e1000_attach(struct pci_func *e1000){
         tx_descriptors[i].upper.data |= E1000_TXD_STAT_DD;
     }
 
-    *REG(E1000_RDH) = 1;
-    *REG(E1000_RDT) = 0;
-
-    *REG(E1000_TIPG) = 0;
     *REG(E1000_TIPG) = 10 << 0; // IPGT [9:0]
 
     *REG(E1000_TDH) = 0;
@@ -112,6 +112,12 @@ int e1000_attach(struct pci_func *e1000){
     *REG(E1000_RDBAL) = page2pa(p);
     *REG(E1000_RDBAH) = 0;
     *REG(E1000_RDLEN) = RX_DESC_NUM * sizeof (struct e1000_rx_desc);
+
+    *REG(E1000_RDH) = 1;
+    *REG(E1000_RDT) = 0;
+
+    //*REG(E1000_RADV) = 0xFFD;
+    //*REG(E1000_RDTR) = 0xFFF;
 
     // Set Rx buffers
     for (i = 0; i < RX_DESC_NUM; i++){
@@ -159,9 +165,14 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
     uint32_t tx_tail = *REG(E1000_TDT);
 
     uint32_t last = tx_tail - 1 > tx_tail ? TX_DESC_NUM - 1 : 0;
-    if (!(tx_descriptors[tx_tail].upper.data & E1000_TXD_STAT_DD)){
-        panic ("E_E1000_TX_FULL");
-        return -E_E1000_TX_FULL;
+    while (!(tx_descriptors[tx_tail].upper.data & E1000_TXD_STAT_DD)){
+        if (env_wait_send != NULL){
+            panic ("env_wait_send not empty");
+        }
+        env_wait_send = curenv;
+        curenv->env_status = ENV_NOT_RUNNABLE;
+        curenv->env_tf.tf_regs.reg_eax = 0;
+        sched_yield();
     }
 
     //volatile void * rr = KADDR1(tx_descriptors[tx_tail].buffer_addr);
@@ -186,20 +197,64 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
 
 int e1000_rx_pkg(void* buffer, uint32_t size){
 
+    cprintf("\n::KERNEL Entered e1000_rx_pkg\n");
+
     uint32_t index = (*REG(E1000_RDT) + 1) % RX_DESC_NUM;
-    struct e1000_rx_desc* desc = &rx_descriptors[index];
-    if (!(desc->status & E1000_RXD_STAT_DD)){
-        return -E_E1000_RX_EMPTY;
+    volatile struct e1000_rx_desc* desc = &rx_descriptors[index];
+
+    int i;
+
+    while  (!(desc->status & E1000_RXD_STAT_DD)){
+        if (env_wait_send != NULL){
+            panic ("env_wait_receive not empty");
+        }
+        env_wait_receive = curenv;
+        curenv->env_status = ENV_NOT_RUNNABLE;
+        curenv->env_tf.tf_regs.reg_eax = 0;
+        sched_yield();
     }
 
-    if (size < desc->length){
-        size = desc->length;
-    }
+    size = desc->length;
 
-    memcpy(KADDR(desc->buffer_addr), (void*) buffer, size);
+#if 0
+    cprintf("\n::KERNELincoming packet start length %d\n", desc->length);
+    uint32_t* ptr = (uint32_t*) KADDR(desc->buffer_addr);
+    for (i = 0; i < size / 4; i++){
+        cprintf("0x%08x ", ptr[i]);
+    }
+    cprintf("\n::KERNELincoming packet end\n");
+#endif
+
+    memcpy((void*) buffer, KADDR(desc->buffer_addr), size);
     desc->status &= ~E1000_RXD_STAT_DD;
     *REG(E1000_RDT) = index;
+
+    cprintf("\n::KERNELExit e1000_rx_pkg\n");
 
     return size;
 
 }
+
+void e1000_interrupt_handler(){
+
+
+    uint32_t cause = *REG(E1000_ICR);
+
+    if (cause & E1000_ICR_TXDW){
+        if (env_wait_send != NULL){
+            env_wait_send->env_status = ENV_RUNNABLE;
+            env_wait_send = NULL;
+        }
+    }
+
+    if (cause & E1000_ICR_RXT0) {
+        if (env_wait_receive == NULL){
+            //cprintf("\ne1000 interrupt rx but no env is waiting\n", cause);
+
+        } else {
+            env_wait_receive->env_status = ENV_RUNNABLE;
+            env_wait_receive = NULL;
+        }
+    }
+}
+

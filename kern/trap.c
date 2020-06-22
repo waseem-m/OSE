@@ -14,6 +14,7 @@
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 static struct Taskstate ts;
 
@@ -110,7 +111,7 @@ trap_init(void)
 	SETGATE(idt[IRQ_OFFSET + 8],  0, GD_KT, hw_handler_8, 0);
 	SETGATE(idt[IRQ_OFFSET + 9],  0, GD_KT, hw_handler_9, 0);
 	SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, hw_handler_10, 0);
-	SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, hw_handler_11, 0);
+	SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, e1000_handler, 0);
 	SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, hw_handler_12, 0);
 	SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, hw_handler_13, 0);
 	SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, hw_handler_14, 0);
@@ -284,6 +285,13 @@ trap_dispatch(struct Trapframe *tf)
         return;
     }
 
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_E1000){
+        e1000_interrupt_handler();
+        lapic_eoi();
+        irq_eoi();
+        return;
+    }
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -407,24 +415,20 @@ page_fault_handler(struct Trapframe *tf)
 	// Destroy the environment that caused the fault.
 
 	uintptr_t curr_stack = tf->tf_esp;
-	bool esp_is_valid = false;
-	if ((UXSTACKTOP - PGSIZE  < curr_stack && curr_stack < UXSTACKTOP) ||
-	    (USTACKTOP - PTSIZE  < curr_stack && curr_stack < USTACKTOP)){
-	    esp_is_valid = true;
-	}
 
-
-	if (curenv->env_pgfault_upcall != NULL && esp_is_valid){
+	if (curenv->env_pgfault_upcall != NULL ){
 
 	    // check that the handler is valid (read only). TODO: Not sure if needed.
 	    //user_mem_assert(curenv, curenv->env_pgfault_upcall, sizeof(uintptr_t), 0);
 
-	    uintptr_t utf_ptr = tf->tf_esp < USTACKTOP ? UXSTACKTOP : tf->tf_esp - 4;
+	    bool is_exception_stack = (tf->tf_esp >= UXSTACKTOP - PGSIZE && tf->tf_esp < UXSTACKTOP);
+	    uintptr_t utf_ptr =  is_exception_stack ? tf->tf_esp - 4 : UXSTACKTOP;
+
 	    utf_ptr -=  sizeof(struct UTrapframe);
 	    struct UTrapframe* utf = (struct UTrapframe*) utf_ptr;
 
 	    // check if the environment allocated a page for the exception stack.
-	    user_mem_assert(curenv, (void*) utf, PGSIZE, PTE_W);
+	    user_mem_assert(curenv, (void*) utf, PGSIZE, PTE_W |PTE_P |PTE_U);
 
 	    utf->utf_eip = tf->tf_eip;
 	    utf->utf_esp = tf->tf_esp;
