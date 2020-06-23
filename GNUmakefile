@@ -7,6 +7,14 @@
 #
 OBJDIR := obj
 
+# =============== CHALLENGE 1 ===============
+# IS_CHALLENGE1: 1 for true, 0 for false
+IS_CHALLENGE1 := 1
+# MAC ADDRESS (if challenge1)
+# Format = XX:XX:XX:XX:XX:XX
+MACADDR := 00:11:22:33:44:00
+# ===========================================
+
 # Run 'make V=1' to turn on verbose commands, or 'make V=0' to turn them off.
 ifeq ($(V),1)
 override V =
@@ -123,9 +131,11 @@ all:
 	   $(OBJDIR)/user/%.o
 
 KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
-#USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
-#challenge 1:
-USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs -DEEPROM_MAC
+ifeq ($(IS_CHALLENGE1), 1)
+	USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs -DEEPROM_MAC
+else
+	USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
+endif
 
 # Update .vars.X if variable X has changed since the last make run.
 #
@@ -158,11 +168,15 @@ IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
 IMAGES += $(OBJDIR)/fs/fs.img
-#QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
-#	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
-#challenge 1:
-QEMUOPTS += -net user -net nic,macaddr=00:11:22:33:44:00,model=e1000 -redir tcp:$(PORT7)::7 \
+
+ifeq ($(IS_CHALLENGE1), 1)
+	QEMUOPTS += -net user -net nic,macaddr=$(MACADDR),model=e1000 -redir tcp:$(PORT7)::7 \
 	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
+else
+	QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
+	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
+endif
+
 QEMUOPTS += $(QEMUEXTRA)
 
 .gdbinit: .gdbinit.tmpl
