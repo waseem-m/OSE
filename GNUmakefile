@@ -9,8 +9,10 @@ OBJDIR := obj
 
 # =============== CHALLENGE 1 ===============
 # IS_CHALLENGE1: 1 for true, 0 for false
-IS_CHALLENGE1 := 1
 # MAC ADDRESS (if challenge1)
+ifeq ($(IS_CHALLENGE1),)
+	IS_CHALLENGE1 := 0
+endif
 # Format = XX:XX:XX:XX:XX:XX
 MACADDR := 00:11:22:33:44:00
 # ===========================================

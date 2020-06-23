@@ -11,8 +11,13 @@
 
 // LAB 6: Your driver code here
 
+#define PTE_COW     0x800
+
 #define TX_DESC_NUM 64
 #define RX_DESC_NUM 128
+
+#define TX_BUF_ADDR (USTACKTOP-PTSIZE-(TX_DESC_NUM * PGSIZE))
+#define GET_TX_BUF(index) (TX_BUF_ADDR + (index * PGSIZE))
 
 static volatile uint32_t  *base_address;
 static struct e1000_tx_desc* tx_descriptors;
@@ -55,7 +60,7 @@ int e1000_attach(struct pci_func *e1000){
 
     struct PageInfo *p = NULL;
     if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
-        return -E_NO_MEM;
+        panic ("e1000_attach no mem");
     }
 
     // Transmit descriptors
@@ -69,11 +74,6 @@ int e1000_attach(struct pci_func *e1000){
 
     int i;
     for (i = 0; i < TX_DESC_NUM; i++){
-        if ((p = page_alloc(ALLOC_ZERO)) == 0 ){ // TODO: clean memory on error
-            return -E_NO_MEM;
-        }
-        //cprintf("\nE1000 buffer %d pa %x va %x \n",i, page2pa(p), page2kva(p) );
-        tx_descriptors[i].buffer_addr = page2pa(p);
         tx_descriptors[i].lower.data |= E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
         tx_descriptors[i].upper.data |= E1000_TXD_STAT_DD;
     }
@@ -94,19 +94,17 @@ int e1000_attach(struct pci_func *e1000){
     ///////////////////////////////////////////
 
     if ((p = page_alloc(ALLOC_ZERO)) == 0 ){
-        return -E_NO_MEM;
+        panic ("e1000_attach no mem");
     }
 
     rx_descriptors = page2kva(p);
 
     // Section 14.4
-    //*(uint64_t*) REG(E1000_RA) = 0x0000563412005452ull;
-    *(uint64_t*) REG(E1000_RA) = e1000_get_mac_address();;
+    *(uint64_t*) REG(E1000_RA) = e1000_get_mac_address();
     *REG(E1000_RAH) |= E1000_RAH_AV;
 
     cprintf("\n RAL 0x%x", *REG(E1000_RAL));
     cprintf("\n RAH 0x%x", *REG(E1000_RAH));
-    cprintf("\n");
 
 
     *REG(E1000_MTA) = 0; //initalize MTA to 0
@@ -118,15 +116,12 @@ int e1000_attach(struct pci_func *e1000){
     *REG(E1000_RDH) = 1;
     *REG(E1000_RDT) = 0;
 
-    //*REG(E1000_RADV) = 0xFFD;
-    //*REG(E1000_RDTR) = 0xFFF;
-
     // Set Rx buffers
     for (i = 0; i < RX_DESC_NUM; i++){
         if ((p = page_alloc(ALLOC_ZERO)) == 0 ){ // TODO: clean memory on error
-            return -E_NO_MEM;
+            panic ("e1000_attach no mem");
         }
-        rx_descriptors[i].buffer_addr = page2pa(p);
+        rx_descriptors[i].buffer_addr = page2pa(p) + 4;
         rx_descriptors[i].status &= ~E1000_RXD_STAT_DD;
     }
 
@@ -154,18 +149,9 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
 
     if (size > MAX_PKG_SIZE){
         panic ("MAX_PKG_SIZE");
-        return -E_INVAL;
-    }
-
-    uint32_t i;
-    ////cprintf("\ne1000_tx_pkg Data:");
-    char* buf = buffer;
-    for (i = 0 ; i < size ; i += 4){
-        ////cprintf("\n%x", *(uint32_t*)&buf[i]);
     }
 
     uint32_t tx_tail = *REG(E1000_TDT);
-
     uint32_t last = tx_tail - 1 > tx_tail ? TX_DESC_NUM - 1 : 0;
     while (!(tx_descriptors[tx_tail].upper.data & E1000_TXD_STAT_DD)){
         if (env_wait_send != NULL){
@@ -177,29 +163,32 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
         sched_yield();
     }
 
-    //volatile void * rr = KADDR1(tx_descriptors[tx_tail].buffer_addr);
-    ////cprintf("\n DEBUG2 KADDR1 %p", rr);
-    ////cprintf("\n====e1000_tx_pkg D1 va %p pa %p \n", rr, tx_descriptors[tx_tail].buffer_addr);
-    memcpy(KADDR(tx_descriptors[tx_tail].buffer_addr), (void*) buffer, size);
+    struct e1000_tx_desc* desc = tx_descriptors + tx_tail;
+
+    struct PageInfo *pp;
+    pte_t* pte;
+    if ((pp = page_lookup(curenv->env_pgdir,buffer, &pte)) == NULL){
+        panic("e1000_tx_pkg page lookup");
+    }
+
+    if (page_insert(curenv->env_pgdir, pp, (void*) GET_TX_BUF(tx_tail), PTE_W) < 0){
+        panic("e1000_tx_pkg page_insert not enough mem");
+    }
+
+    *pte |= PTE_COW;
+    *pte &= ~PTE_W;
+
     tx_descriptors[tx_tail].lower.flags.length = size;
     tx_descriptors[tx_tail].lower.data |= E1000_TXD_CMD_EOP;
     tx_descriptors[tx_tail].upper.data &= ~E1000_TXD_STAT_DD;
-
-    char* sss = KADDR(tx_descriptors[tx_tail].buffer_addr);
-    ////cprintf("\nDebug_3");
-    for (i = 0 ; i < size ; i += 4){
-        ////cprintf("\n%x", *(uint32_t*)&sss[i]);
-    }
+    tx_descriptors[tx_tail].buffer_addr = page2pa(pp) + 4;
 
     *REG(E1000_TDT) = (++tx_tail) % TX_DESC_NUM;
-    ////cprintf("\n====e1000_tx_pkg FINISHED envid %x \n", curenv->env_id);
 
     return 0;
 }
 
 int e1000_rx_pkg(void* buffer, uint32_t size){
-
-    cprintf("\n::KERNEL Entered e1000_rx_pkg\n");
 
     uint32_t index = (*REG(E1000_RDT) + 1) % RX_DESC_NUM;
     volatile struct e1000_rx_desc* desc = &rx_descriptors[index];
@@ -218,20 +207,23 @@ int e1000_rx_pkg(void* buffer, uint32_t size){
 
     size = desc->length;
 
-#if 0
-    cprintf("\n::KERNELincoming packet start length %d\n", desc->length);
-    uint32_t* ptr = (uint32_t*) KADDR(desc->buffer_addr);
-    for (i = 0; i < size / 4; i++){
-        cprintf("0x%08x ", ptr[i]);
+    struct PageInfo *pp;
+    if ((pp = page_lookup(kern_pgdir,KADDR(desc->buffer_addr), NULL)) == NULL){
+        panic("e1000_rx_pkg page lookup");
     }
-    cprintf("\n::KERNELincoming packet end\n");
-#endif
 
-    memcpy((void*) buffer, KADDR(desc->buffer_addr), size);
+    if (page_insert(curenv->env_pgdir, pp, buffer, PTE_U | PTE_W) < 0){
+        panic("e1000_rx_pkg page_insert not enough mem");
+    }
+
+    if ((pp = page_alloc(ALLOC_ZERO)) == 0 ){ // TODO: clean memory on error
+        panic("e1000_rx_pkg page_alloc not enough mem");
+    }
+
+    desc->buffer_addr = page2pa(pp) + 4;
+
     desc->status &= ~E1000_RXD_STAT_DD;
     *REG(E1000_RDT) = index;
-
-    cprintf("\n::KERNELExit e1000_rx_pkg\n");
 
     return size;
 
@@ -249,18 +241,30 @@ void e1000_interrupt_handler(){
         }
     }
 
-    if (cause & E1000_ICR_RXT0) {
-        if (env_wait_receive == NULL){
-            //cprintf("\ne1000 interrupt rx but no env is waiting\n", cause);
-
-        } else {
-            env_wait_receive->env_status = ENV_RUNNABLE;
-            env_wait_receive = NULL;
-        }
+    if ((cause & E1000_ICR_RXT0) && env_wait_receive != NULL) {
+        env_wait_receive->env_status = ENV_RUNNABLE;
+        env_wait_receive = NULL;
     }
 }
 
+u64_t read_eeprom(uint32_t address){
+    *REG(E1000_EERD) = (address << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
+    uint64_t data = 0;
+    while(((data = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
+    return data >> E1000_EEPROM_RW_REG_DATA;
+}
+
 uint64_t e1000_get_mac_address(){
+
+#if 1
+    uint64_t address = read_eeprom(0x00);
+    address |= read_eeprom(0x01) << 16;
+    address |= read_eeprom(0x02) << 32;
+    return address;
+#endif
+
+#if 0
+
 	uint64_t address = 0;
 	uint64_t shift = 0;
 
@@ -296,5 +300,6 @@ uint64_t e1000_get_mac_address(){
 //	cprintf("\n\n");
 
 	return address;
+#endif
 }
 
