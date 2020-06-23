@@ -42,7 +42,7 @@ output(envid_t ns_envid)
 
         //cprintf("\n=========OUTPUT envid %x %p len %d",thisenv->env_id, data, len );
         while (true){
-            if ((result = sys_tx_pkg(data, len, LAST_PKG)) < 0){
+            if ((result = sys_tx_pkg(data, len)) < 0){
                 if (result == -E_E1000_TX_FULL){
                     sys_yield();
                     continue;

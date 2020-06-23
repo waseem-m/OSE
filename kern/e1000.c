@@ -139,10 +139,7 @@ int e1000_attach(struct pci_func *e1000){
     return 0;
 }
 
-int e1000_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
-
-
-    ////cprintf("\n====e1000_tx_pkg START envid %x buffer %p size %d last_pkg %d\n", curenv->env_id, buffer, size, last_pkg);
+int e1000_tx_pkg(void* buffer, uint32_t size){
 
     int result;
     user_mem_assert(curenv, buffer, size, PTE_U);
@@ -205,8 +202,6 @@ int e1000_rx_pkg(void* buffer, uint32_t size){
         sched_yield();
     }
 
-    size = desc->length;
-
     struct PageInfo *pp;
     if ((pp = page_lookup(kern_pgdir,KADDR(desc->buffer_addr), NULL)) == NULL){
         panic("e1000_rx_pkg page lookup");
@@ -225,7 +220,7 @@ int e1000_rx_pkg(void* buffer, uint32_t size){
     desc->status &= ~E1000_RXD_STAT_DD;
     *REG(E1000_RDT) = index;
 
-    return size;
+    return size < desc->length ? size : desc->length;
 
 }
 

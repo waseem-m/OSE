@@ -63,7 +63,7 @@ unsigned int sys_time_msec(void);
 
 #define NOT_LAST_PKG false
 #define LAST_PKG true
-int sys_tx_pkg(void* buffer, uint32_t size, bool last);
+int sys_tx_pkg(void* buffer, uint32_t size);
 int sys_rx_pkg(void* buffer, uint32_t size);
 int sys_set_service();
 int sys_get_mac_address(uint64_t *mac);

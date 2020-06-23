@@ -124,8 +124,8 @@ sys_time_msec(void)
 }
 
 int
-sys_tx_pkg(void* buffer, uint32_t size, bool last){
-    return syscall(SYS_tx_pkg, 0, (uint32_t) buffer, size, last, 0, 0);
+sys_tx_pkg(void* buffer, uint32_t size){
+    return syscall(SYS_tx_pkg, 0, (uint32_t) buffer, size, 0, 0, 0);
 }
 
 int

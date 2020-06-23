@@ -495,8 +495,8 @@ sys_time_msec(void)
 }
 
 static int
-sys_tx_pkg(void* buffer, uint32_t size, bool last_pkg){
-    return e1000_tx_pkg(buffer, size, true);
+sys_tx_pkg(void* buffer, uint32_t size){
+    return e1000_tx_pkg(buffer, size);
 }
 
 static int
@@ -573,7 +573,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
             return sys_time_msec();
 
         case SYS_tx_pkg:
-            return sys_tx_pkg((void*) a1, a2, a3);
+            return sys_tx_pkg((void*) a1, a2);
 
         case SYS_rx_pkg:
             return sys_rx_pkg((void*) a1, a2);
