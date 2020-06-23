@@ -510,6 +510,11 @@ sys_set_service(){
     return 0;
 }
 
+static int sys_get_mac_address(uint64_t *mac){
+	*mac = e1000_get_mac_address();
+	return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -575,6 +580,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
         case SYS_set_service:
             return sys_set_service();
+
+        case SYS_get_mac_address:
+			return sys_get_mac_address((uint64_t *) a1);
 
         default:
             return -E_INVAL;

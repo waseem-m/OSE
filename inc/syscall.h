@@ -21,6 +21,7 @@ enum {
 	SYS_tx_pkg,
 	SYS_rx_pkg,
 	SYS_set_service,
+	SYS_get_mac_address,
 	NSYSCALLS
 };
 

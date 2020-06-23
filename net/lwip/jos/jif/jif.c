@@ -60,6 +60,7 @@ low_level_init(struct netif *netif)
     netif->mtu = 1500;
     netif->flags = NETIF_FLAG_BROADCAST;
 
+    /*
     // MAC address is hardcoded to eliminate a system call
     netif->hwaddr[0] = 0x52;
     netif->hwaddr[1] = 0x54;
@@ -67,6 +68,25 @@ low_level_init(struct netif *netif)
     netif->hwaddr[3] = 0x12;
     netif->hwaddr[4] = 0x34;
     netif->hwaddr[5] = 0x56;
+    */
+
+
+    // Challenge 1: get mac address system call
+    uint64_t mac_address;
+    sys_get_mac_address(&mac_address);
+
+    netif->hwaddr[0] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	netif->hwaddr[1] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	netif->hwaddr[2] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	netif->hwaddr[3] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	netif->hwaddr[4] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	netif->hwaddr[5] = (mac_address & 0xFF);
+
 }
 
 /*

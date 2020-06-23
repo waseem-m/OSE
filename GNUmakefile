@@ -123,7 +123,9 @@ all:
 	   $(OBJDIR)/user/%.o
 
 KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
-USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
+#USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
+#challenge 1:
+USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs -DEEPROM_MAC
 
 # Update .vars.X if variable X has changed since the last make run.
 #
@@ -156,7 +158,10 @@ IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
 IMAGES += $(OBJDIR)/fs/fs.img
-QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
+#QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
+#	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
+#challenge 1:
+QEMUOPTS += -net user -net nic,macaddr=00:11:22:33:44:00,model=e1000 -redir tcp:$(PORT7)::7 \
 	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
 QEMUOPTS += $(QEMUEXTRA)
 

@@ -137,3 +137,12 @@ int
 sys_set_service(){
     return syscall(SYS_set_service, 0, 0, 0, 0, 0, 0);
 }
+
+int
+sys_get_mac_address(uint64_t * mac){
+	if(mac == NULL){
+		return -1;
+	}
+	return syscall(SYS_get_mac_address,0,(uint32_t) mac,0,0,0,0);
+}
+

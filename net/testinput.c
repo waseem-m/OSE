@@ -16,7 +16,25 @@ announce(void)
 	// listens for very specific ARP requests, such as requests
 	// for the gateway IP.
 
+#ifdef EEPROM_MAC
+	uint64_t mac_address;
+	sys_get_mac_address(&mac_address);
+	uint8_t mac[6];
+	mac[0] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	mac[1] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	mac[2] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	mac[3] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	mac[4] = (mac_address & 0xFF);
+	mac_address = (mac_address >> 8);
+	mac[5] = (mac_address & 0xFF);
+#else
 	uint8_t mac[6] = {0x52, 0x54, 0x00, 0x12, 0x34, 0x56};
+#endif
+
 	uint32_t myip = inet_addr(IP);
 	uint32_t gwip = inet_addr(DEFAULT);
 	int r;

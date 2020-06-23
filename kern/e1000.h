@@ -8,6 +8,7 @@ int e1000_tx_pkg(void* buffer, uint32_t size, bool last);
 int e1000_rx_pkg(void* buffer, uint32_t size);
 int e1000_get_irq();
 void e1000_interrupt_handler();
+uint64_t e1000_get_mac_address();
 
 /* PCI Device IDs */
 #define E1000_DEV_ID_82542               0x1000

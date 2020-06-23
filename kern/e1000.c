@@ -100,11 +100,13 @@ int e1000_attach(struct pci_func *e1000){
     rx_descriptors = page2kva(p);
 
     // Section 14.4
-    *(uint64_t*) REG(E1000_RA) = 0x0000563412005452ull;
+    //*(uint64_t*) REG(E1000_RA) = 0x0000563412005452ull;
+    *(uint64_t*) REG(E1000_RA) = e1000_get_mac_address();;
     *REG(E1000_RAH) |= E1000_RAH_AV;
 
     cprintf("\n RAL 0x%x", *REG(E1000_RAL));
     cprintf("\n RAH 0x%x", *REG(E1000_RAH));
+    cprintf("\n");
 
 
     *REG(E1000_MTA) = 0; //initalize MTA to 0
@@ -256,5 +258,43 @@ void e1000_interrupt_handler(){
             env_wait_receive = NULL;
         }
     }
+}
+
+uint64_t e1000_get_mac_address(){
+	uint64_t address = 0;
+	uint64_t shift = 0;
+
+	*REG(E1000_EERD) = (0x00 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
+	uint64_t poll_reg = 0;
+	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
+//	cprintf("\nshift= %u bits\n", 16*shift);
+	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
+	shift++;
+//	cprintf("\n\n");
+//	cprintf("================= mac address (phase 0) = %llx =================",address);
+//	cprintf("\n\n");
+
+
+	*REG(E1000_EERD) = (0x01 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
+	poll_reg = 0;
+	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
+//	cprintf("\nshift= %u bits\n", 16*shift);
+	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
+	shift++;
+//	cprintf("\n\n");
+//	cprintf("================= mac address (phase 1) = %llx =================",address);
+//	cprintf("\n\n");
+
+	*REG(E1000_EERD) = (0x02 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
+	poll_reg = 0;
+	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
+//	cprintf("\nshift= %u bits\n", 16*shift);
+	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
+	shift++;
+//	cprintf("\n\n");
+//	cprintf("================= mac address (phase 2) = %llx =================",address);
+//	cprintf("\n\n");
+
+	return address;
 }
 
