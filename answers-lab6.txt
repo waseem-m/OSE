@@ -1,0 +1,18 @@
+1) How did you structure your transmit implementation? In particular, what do you do if the transmit ring is full?
+The transmit queue is not allocated on init.
+We store a list of 64 virtual addresses starting from (USTACKTOP-PTSIZE-(TX_DESC_NUM * PGSIZE))
+#define TX_BUF_ADDR (USTACKTOP-PTSIZE-(TX_DESC_NUM * PGSIZE))
+#define GET_TX_BUF(index) (TX_BUF_ADDR + (index * PGSIZE))
+When a packet needs to be transmitted, we map it into the corrospoding virtual address.
+To support zero-copy we enable the PTE_COW flag in the VA address of the incoming buffer (and deactivate the PTE_W flag).
+
+2) How did you structure your receive implementation? In particular, what do you do if the receive queue is empty and a user environment requests the next incoming packet?
+On init, we allocated a page for each of the 128 buffers.
+When a new packet is received, we map it to the buffer of the current ENV and allocated a new page for the current buffer descriptor address.
+This way the receiving ENV is now the owner of the packet.
+
+3) What does the web page served by JOS's web server say? 
+This file came from JOS. Cheesy web page!
+
+4) How long approximately did it take you to do this lab?
+~5 days

@@ -250,51 +250,9 @@ u64_t read_eeprom(uint32_t address){
 }
 
 uint64_t e1000_get_mac_address(){
-
-#if 1
     uint64_t address = read_eeprom(0x00);
     address |= read_eeprom(0x01) << 16;
     address |= read_eeprom(0x02) << 32;
     return address;
-#endif
-
-#if 0
-
-	uint64_t address = 0;
-	uint64_t shift = 0;
-
-	*REG(E1000_EERD) = (0x00 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
-	uint64_t poll_reg = 0;
-	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
-//	cprintf("\nshift= %u bits\n", 16*shift);
-	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
-	shift++;
-//	cprintf("\n\n");
-//	cprintf("================= mac address (phase 0) = %llx =================",address);
-//	cprintf("\n\n");
-
-
-	*REG(E1000_EERD) = (0x01 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
-	poll_reg = 0;
-	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
-//	cprintf("\nshift= %u bits\n", 16*shift);
-	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
-	shift++;
-//	cprintf("\n\n");
-//	cprintf("================= mac address (phase 1) = %llx =================",address);
-//	cprintf("\n\n");
-
-	*REG(E1000_EERD) = (0x02 << E1000_EEPROM_RW_ADDR_SHIFT) | E1000_EEPROM_RW_REG_START;
-	poll_reg = 0;
-	while(((poll_reg = *REG(E1000_EERD)) & E1000_EEPROM_RW_REG_DONE) == 0);
-//	cprintf("\nshift= %u bits\n", 16*shift);
-	address += ((poll_reg >> E1000_EEPROM_RW_REG_DATA) << (16 * shift));
-	shift++;
-//	cprintf("\n\n");
-//	cprintf("================= mac address (phase 2) = %llx =================",address);
-//	cprintf("\n\n");
-
-	return address;
-#endif
 }
 
